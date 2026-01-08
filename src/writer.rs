@@ -12,10 +12,7 @@ pub fn sanitize_filename(title: &str) -> String {
         })
         .collect::<String>();
 
-    let collapsed = sanitized
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ");
+    let collapsed = sanitized.split_whitespace().collect::<Vec<_>>().join(" ");
 
     let trimmed = collapsed.trim();
 
@@ -55,8 +52,7 @@ pub fn write_link_file(
     tags: &[String],
 ) -> Result<PathBuf> {
     // Create directory if it doesn't exist
-    fs::create_dir_all(dir)
-        .context(format!("Failed to create directory: {}", dir.display()))?;
+    fs::create_dir_all(dir).context(format!("Failed to create directory: {}", dir.display()))?;
 
     // Generate filename
     let base_filename = generate_filename(date, title);

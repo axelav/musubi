@@ -1,6 +1,6 @@
+use anyhow::{Context, Result};
 use std::env;
 use std::path::PathBuf;
-use anyhow::{Context, Result};
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -17,8 +17,7 @@ impl Config {
         let links_dir = if let Ok(dir) = env::var("MUSUBI_LINKS_DIR") {
             PathBuf::from(dir)
         } else {
-            let home = env::var("HOME")
-                .context("HOME environment variable not set")?;
+            let home = env::var("HOME").context("HOME environment variable not set")?;
             PathBuf::from(home).join("links")
         };
 

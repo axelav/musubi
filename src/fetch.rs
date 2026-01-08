@@ -2,16 +2,24 @@ use anyhow::{Context, Result};
 use url::Url;
 
 const TRACKING_PARAMS: &[&str] = &[
-    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-    "fbclid", "gclid", "gclsrc",
-    "mc_cid", "mc_eid",
-    "_hsenc", "_hsmi",
-    "ref", "source",
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_term",
+    "utm_content",
+    "fbclid",
+    "gclid",
+    "gclsrc",
+    "mc_cid",
+    "mc_eid",
+    "_hsenc",
+    "_hsmi",
+    "ref",
+    "source",
 ];
 
 pub fn clean_url(url_str: &str) -> Result<String> {
-    let mut url = Url::parse(url_str)
-        .context("Failed to parse URL")?;
+    let mut url = Url::parse(url_str).context("Failed to parse URL")?;
 
     let filtered_pairs: Vec<(String, String)> = url
         .query_pairs()
@@ -53,9 +61,7 @@ pub fn fetch_page(url: &str) -> Result<FetchedPage> {
         .send()
         .context(format!("Failed to fetch URL: {}", cleaned_url))?;
 
-    let html = response
-        .text()
-        .context("Failed to read response body")?;
+    let html = response.text().context("Failed to read response body")?;
 
     Ok(FetchedPage {
         original_url: url.to_string(),

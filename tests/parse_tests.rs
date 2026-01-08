@@ -25,7 +25,10 @@ fn test_extract_description_from_meta() {
     "#;
 
     let metadata = extract_metadata(html, "https://example.com").unwrap();
-    assert_eq!(metadata.description, Some("This is a test description".to_string()));
+    assert_eq!(
+        metadata.description,
+        Some("This is a test description".to_string())
+    );
 }
 
 #[test]
@@ -40,5 +43,8 @@ fn test_extract_og_description() {
     "#;
 
     let metadata = extract_metadata(html, "https://example.com").unwrap();
-    assert_eq!(metadata.description, Some("Open Graph description".to_string()));
+    assert_eq!(
+        metadata.description,
+        Some("Open Graph description".to_string())
+    );
 }

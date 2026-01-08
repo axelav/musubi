@@ -1,8 +1,8 @@
-use std::fs;
-use tempfile::TempDir;
 use musubi::fetch;
 use musubi::parse;
 use musubi::writer;
+use std::fs;
+use tempfile::TempDir;
 
 #[test]
 fn test_end_to_end_without_llm() {
@@ -34,7 +34,8 @@ fn test_end_to_end_without_llm() {
         &metadata.fetch_date,
         None,
         &[],
-    ).unwrap();
+    )
+    .unwrap();
 
     // Verify file was created
     assert!(file_path.exists());

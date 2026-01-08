@@ -23,8 +23,7 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     // Load configuration
-    let mut config = Config::from_env()
-        .context("Failed to load configuration")?;
+    let mut config = Config::from_env().context("Failed to load configuration")?;
 
     // Override directory if provided
     if let Some(dir) = cli.dir {
@@ -33,8 +32,7 @@ fn main() -> Result<()> {
 
     // Fetch page
     println!("⏳ Fetching: {}", cli.url);
-    let page = fetch::fetch_page(&cli.url)
-        .context("Failed to fetch page")?;
+    let page = fetch::fetch_page(&cli.url).context("Failed to fetch page")?;
 
     // Parse metadata
     let metadata = parse::extract_metadata(&page.html, &page.cleaned_url)

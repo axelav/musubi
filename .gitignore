@@ -1,1 +1,22 @@
+# Worktrees
 .worktrees/
+
+# Rust
+/target/
+Cargo.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+*.profraw
+*.profdata
+
+# Environment
+.env
+.env.local

@@ -27,6 +27,36 @@ pub fn collapse_consecutive(s: &str) -> String {
     result
 }
 
+pub fn normalize_title(title: &str) -> String {
+    use deunicode::deunicode;
+
+    // Step 1: Transliterate unicode to ASCII
+    let ascii_title = deunicode(title);
+
+    // Step 2: Keep only allowed characters
+    let allowed = |c: char| {
+        c.is_ascii_alphanumeric()
+            || matches!(c, ' ' | '.' | ',' | '(' | ')' | '\'' | '-' | '&')
+    };
+
+    let filtered: String = ascii_title
+        .chars()
+        .filter(|&c| allowed(c))
+        .collect();
+
+    // Step 3: Cleanup - collapse consecutive spaces/hyphens
+    let cleaned = collapse_consecutive(&filtered);
+
+    // Step 4: Trim and handle empty case
+    let result = cleaned.trim();
+    // Check if result is empty or contains only non-alphanumeric characters
+    if result.is_empty() || !result.chars().any(|c| c.is_alphanumeric()) {
+        "Untitled".to_string()
+    } else {
+        result.to_string()
+    }
+}
+
 pub fn extract_metadata(html: &str, url: &str) -> Result<PageMetadata> {
     let document = Html::parse_document(html);
 

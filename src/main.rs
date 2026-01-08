@@ -52,7 +52,7 @@ fn main() -> Result<()> {
                 match provider.generate_summary(&metadata.title, &text_content) {
                     Ok(summary) => {
                         println!("✓ Generated summary");
-                        (Some(summary.text), summary.tags)
+                        (Some(summary.summary), summary.tags)
                     }
                     Err(e) => {
                         eprintln!("⚠ Could not generate summary: {}", e);

@@ -33,6 +33,37 @@ pub fn clean_url(url_str: &str) -> Result<String> {
     Ok(url.to_string())
 }
 
+#[derive(Debug, Clone)]
+pub struct FetchedPage {
+    pub original_url: String,
+    pub cleaned_url: String,
+    pub html: String,
+}
+
+pub fn fetch_page(url: &str) -> Result<FetchedPage> {
+    let cleaned_url = clean_url(url)?;
+
+    let client = reqwest::blocking::Client::builder()
+        .user_agent("Mozilla/5.0 (compatible; Musubi/0.1)")
+        .build()
+        .context("Failed to create HTTP client")?;
+
+    let response = client
+        .get(&cleaned_url)
+        .send()
+        .context(format!("Failed to fetch URL: {}", cleaned_url))?;
+
+    let html = response
+        .text()
+        .context("Failed to read response body")?;
+
+    Ok(FetchedPage {
+        original_url: url.to_string(),
+        cleaned_url,
+        html,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -10,6 +10,23 @@ pub struct PageMetadata {
     pub fetch_date: DateTime<Utc>,
 }
 
+pub fn collapse_consecutive(s: &str) -> String {
+    let mut result = String::new();
+    let mut prev = '\0';
+
+    for c in s.chars() {
+        if c == ' ' && prev == ' ' {
+            continue; // skip consecutive spaces
+        }
+        if c == '-' && prev == '-' {
+            continue; // skip consecutive hyphens
+        }
+        result.push(c);
+        prev = c;
+    }
+    result
+}
+
 pub fn extract_metadata(html: &str, url: &str) -> Result<PageMetadata> {
     let document = Html::parse_document(html);
 

@@ -1,4 +1,4 @@
-use musubi::parse::{extract_metadata, PageMetadata};
+use musubi::parse::{collapse_consecutive, extract_metadata};
 
 #[test]
 fn test_extract_title_from_html() {
@@ -47,4 +47,21 @@ fn test_extract_og_description() {
         metadata.description,
         Some("Open Graph description".to_string())
     );
+}
+
+#[test]
+fn test_collapse_consecutive_spaces() {
+    assert_eq!(collapse_consecutive("hello  world"), "hello world");
+    assert_eq!(collapse_consecutive("multiple   spaces"), "multiple spaces");
+}
+
+#[test]
+fn test_collapse_consecutive_hyphens() {
+    assert_eq!(collapse_consecutive("test--hyphen"), "test-hyphen");
+    assert_eq!(collapse_consecutive("many---hyphens"), "many-hyphens");
+}
+
+#[test]
+fn test_collapse_mixed() {
+    assert_eq!(collapse_consecutive("test  --  mixed"), "test - mixed");
 }

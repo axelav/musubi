@@ -91,6 +91,12 @@ pub fn write_link_file(
     Ok(file_path)
 }
 
+/// Generate HTML filename from markdown path
+/// Example: "2026-01-08 Title.md" -> "2026-01-08 Title.html"
+pub fn get_html_path(md_path: &Path) -> PathBuf {
+    md_path.with_extension("html")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -101,5 +107,12 @@ mod tests {
         let filename = generate_filename(&date, "Test Title");
         let date_str = date.format("%Y-%m-%d").to_string();
         assert_eq!(filename, format!("{} Test Title.md", date_str));
+    }
+
+    #[test]
+    fn test_get_html_path() {
+        let md_path = PathBuf::from("/links/2026-01-08 Title.md");
+        let html_path = get_html_path(&md_path);
+        assert_eq!(html_path, PathBuf::from("/links/2026-01-08 Title.html"));
     }
 }

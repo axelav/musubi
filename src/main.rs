@@ -1,10 +1,12 @@
 use anyhow::{Context, Result};
 use clap::Parser;
+use musubi::archive;
 use musubi::config::Config;
 use musubi::fetch;
 use musubi::parse;
 use musubi::summarize;
 use musubi::writer;
+use std::fs;
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -84,6 +86,27 @@ fn main() -> Result<()> {
     .context("Failed to write link file")?;
 
     println!("✓ Saved: {}", file_path.display());
+
+    // Archive HTML if requested
+    if cli.archive {
+        match archive::archive_page(
+            &page.html,
+            &url::Url::parse(&page.cleaned_url)?,
+            &archive::ArchiveConfig::default(),
+        ) {
+            Ok(archived_html) => {
+                let html_path = writer::get_html_path(&file_path);
+                match fs::write(&html_path, archived_html) {
+                    Ok(_) => println!("✓ Archived: {}", html_path.display()),
+                    Err(e) => eprintln!("⚠ Failed to write archive: {}", e),
+                }
+            }
+            Err(e) => {
+                eprintln!("⚠ Failed to archive page: {}", e);
+                // Markdown already saved, continue
+            }
+        }
+    }
 
     Ok(())
 }

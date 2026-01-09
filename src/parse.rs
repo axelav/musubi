@@ -66,9 +66,9 @@ pub fn extract_metadata(html: &str, url: &str) -> Result<PageMetadata> {
         .select(&title_selector)
         .next()
         .map(|el| el.text().collect::<String>())
-        .unwrap_or_else(|| "Untitled".to_string())
-        .trim()
-        .to_string();
+        .unwrap_or_else(|| "Untitled".to_string());
+
+    let title = normalize_title(&title);
 
     // Extract description (try meta description, then og:description)
     let meta_desc_selector = Selector::parse("meta[name='description']").unwrap();

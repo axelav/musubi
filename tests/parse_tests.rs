@@ -112,3 +112,20 @@ fn test_normalize_empty_and_whitespace() {
 fn test_normalize_trim_whitespace() {
     assert_eq!(normalize_title("  Hello World  "), "Hello World");
 }
+
+#[test]
+fn test_extract_metadata_normalizes_title() {
+    let html = r#"
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Café & Bistró — The Best!</title>
+            <meta name="description" content="Test description">
+        </head>
+        <body></body>
+        </html>
+    "#;
+
+    let metadata = extract_metadata(html, "https://example.com").unwrap();
+    assert_eq!(metadata.title, "Cafe & Bistro - The Best");
+}

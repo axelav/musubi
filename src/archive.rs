@@ -180,7 +180,8 @@ fn inline_stylesheets(
     use scraper::{Html, Selector};
 
     let document = Html::parse_document(html);
-    let link_selector = Selector::parse("link[rel='stylesheet']").unwrap();
+    let link_selector = Selector::parse("link[rel='stylesheet']")
+        .expect("failed to parse CSS selector for stylesheet links");
 
     let mut result = html.to_string();
     let mut failures = Vec::new();

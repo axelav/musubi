@@ -72,9 +72,13 @@ pub fn write_link_file(
     content.push_str(&format!("## {}\n\n", title));
     content.push_str(&format!("{}\n\n", url));
 
-    // FIXME: summary should be formatted as blockquote
     if let Some(summary_text) = summary {
-        content.push_str(&format!("{}\n\n", summary_text));
+        let blockquote = summary_text
+            .lines()
+            .map(|line| format!("> {}", line))
+            .collect::<Vec<_>>()
+            .join("\n");
+        content.push_str(&format!("{}\n\n", blockquote));
     }
 
     content.push_str("---\n\n");
@@ -115,5 +119,29 @@ mod tests {
         let md_path = PathBuf::from("/links/2026-01-08 Title.md");
         let html_path = get_html_path(&md_path);
         assert_eq!(html_path, PathBuf::from("/links/2026-01-08 Title.html"));
+    }
+
+    #[test]
+    fn test_summary_formatted_as_blockquote() {
+        use tempfile::TempDir;
+
+        let temp_dir = TempDir::new().unwrap();
+        let date = Utc::now();
+        let summary = "This is a test summary";
+
+        let file_path = write_link_file(
+            temp_dir.path(),
+            "Test Title",
+            "https://example.com",
+            &date,
+            Some(summary),
+            &[],
+        )
+        .unwrap();
+
+        let content = fs::read_to_string(&file_path).unwrap();
+
+        // Summary should be formatted as blockquote
+        assert!(content.contains("> This is a test summary"));
     }
 }

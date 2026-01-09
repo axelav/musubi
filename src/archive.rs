@@ -22,28 +22,44 @@ impl Default for ArchiveConfig {
 
 /// Remove all script tags from HTML document
 fn strip_scripts(html: &str) -> String {
-    let mut result = html.to_string();
+    let mut result = String::new();
+    let mut remaining = html;
 
-    // Simple approach: remove all <script> tags using string splitting
-    // This handles both inline scripts and external script tags
-    result = result
-        .split("<script")
-        .enumerate()
-        .map(|(i, part)| {
-            if i == 0 {
-                part.to_string()
+    // Case-insensitive search for <script tags
+    while let Some(start_pos) = remaining.to_lowercase().find("<script") {
+        // Add everything before the script tag
+        result.push_str(&remaining[..start_pos]);
+
+        // Find the end of the opening tag
+        let after_script = &remaining[start_pos + 7..]; // 7 = length of "<script"
+
+        if let Some(tag_end_pos) = after_script.find('>') {
+            let tag_content = &after_script[..tag_end_pos];
+
+            // Check if it's a self-closing tag (contains /> before the >)
+            if tag_content.trim_end().ends_with('/') {
+                // Self-closing tag - skip just the tag itself
+                remaining = &after_script[tag_end_pos + 1..];
             } else {
-                // Find closing tag and skip everything until then
-                if let Some(end_pos) = part.find("</script>") {
-                    part[end_pos + 9..].to_string()
+                // Regular tag - find the closing </script> tag
+                let after_tag = &after_script[tag_end_pos + 1..];
+
+                if let Some(close_pos) = after_tag.to_lowercase().find("</script>") {
+                    // Skip everything until after the closing tag
+                    remaining = &after_tag[close_pos + 9..]; // 9 = length of "</script>"
                 } else {
-                    // Self-closing or malformed - remove entire rest
-                    String::new()
+                    // No closing tag found - skip rest of document
+                    remaining = "";
                 }
             }
-        })
-        .collect::<String>();
+        } else {
+            // Malformed tag - skip rest of document
+            remaining = "";
+        }
+    }
 
+    // Add any remaining content after the last script tag
+    result.push_str(remaining);
     result
 }
 

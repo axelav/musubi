@@ -27,3 +27,57 @@ fn test_strips_script_tags() {
     assert!(result.contains("Content"));
     assert!(result.contains("More content"));
 }
+
+#[test]
+fn test_strips_self_closing_script_tags() {
+    let html = r#"<html><body>
+        <p>Before</p>
+        <script src="test.js"/>
+        <p>After</p>
+    </body></html>"#;
+
+    let base_url = Url::parse("https://example.com").unwrap();
+    let config = ArchiveConfig::default();
+    let result = archive_page(html, &base_url, &config).unwrap();
+
+    assert!(!result.contains("<script"));
+    assert!(result.contains("Before"));
+    assert!(result.contains("After"), "Content after self-closing script tag should be preserved");
+}
+
+#[test]
+fn test_strips_uppercase_script_tags() {
+    let html = r#"<html><body>
+        <p>Content</p>
+        <SCRIPT>alert('hello');</SCRIPT>
+        <p>More content</p>
+    </body></html>"#;
+
+    let base_url = Url::parse("https://example.com").unwrap();
+    let config = ArchiveConfig::default();
+    let result = archive_page(html, &base_url, &config).unwrap();
+
+    assert!(!result.to_lowercase().contains("<script"));
+    assert!(result.contains("Content"));
+    assert!(result.contains("More content"));
+}
+
+#[test]
+fn test_strips_mixed_case_script_tags() {
+    let html = r#"<html><body>
+        <p>Before</p>
+        <ScRiPt>alert('test');</sCrIpT>
+        <p>Middle</p>
+        <Script src="test.js"></Script>
+        <p>After</p>
+    </body></html>"#;
+
+    let base_url = Url::parse("https://example.com").unwrap();
+    let config = ArchiveConfig::default();
+    let result = archive_page(html, &base_url, &config).unwrap();
+
+    assert!(!result.to_lowercase().contains("<script"));
+    assert!(result.contains("Before"));
+    assert!(result.contains("Middle"));
+    assert!(result.contains("After"));
+}

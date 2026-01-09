@@ -86,14 +86,28 @@ fn strip_scripts_and_handlers(html: &str) -> String {
             }
 
             if let Some(pos) = pos_double.or(pos_single) {
-                let quote = if result[pos..].starts_with(&pattern_double) { '"' } else { '\'' };
-                if let Some(end) = result[pos..].find(quote).and_then(|start| {
-                    result[pos + start + 1..].find(quote).map(|end| pos + start + 1 + end + 1)
-                }) {
+                // Determine quote type and pattern length
+                let (quote, pattern_len) = if result[pos..].starts_with(&pattern_double) {
+                    ('"', pattern_double.len())
+                } else {
+                    ('\'', pattern_single.len())
+                };
+
+                // Calculate search_start as pos + pattern_len
+                let search_start = pos + pattern_len;
+
+                // Find closing quote from search_start
+                if let Some(closing_quote_offset) = result[search_start..].find(quote) {
+                    // Calculate end properly: search_start + offset + 1 (to include the closing quote)
+                    let end = search_start + closing_quote_offset + 1;
                     result.replace_range(pos..end, "");
                 } else {
+                    // No closing quote found - break to prevent infinite loop
                     break;
                 }
+            } else {
+                // Neither position found - break to prevent infinite loop
+                break;
             }
         }
     }

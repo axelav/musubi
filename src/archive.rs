@@ -242,11 +242,8 @@ fn inline_stylesheets(
 /// Process HTML for archival: inline CSS, strip scripts
 /// Returns processed HTML string ready to save
 pub fn archive_page(html: &str, base_url: &Url, config: &ArchiveConfig) -> Result<String> {
-    // Normalize line endings first (CRLF -> LF)
-    let normalized = html.replace("\r\n", "\n");
-
     // Strip scripts and handlers
-    let mut processed = strip_scripts_and_handlers(&normalized);
+    let mut processed = strip_scripts_and_handlers(html);
 
     // Inline CSS
     let (inlined, failures) = inline_stylesheets(&processed, base_url, config);

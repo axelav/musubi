@@ -130,6 +130,41 @@ fn find_css_links(html: &str) -> Vec<String> {
         .collect()
 }
 
+/// Fetch CSS content from URL with timeout and size limits
+/// Returns Ok(css_content) on success, Err with description on failure
+fn fetch_css(url: &Url, config: &ArchiveConfig) -> Result<String> {
+    let client = reqwest::blocking::Client::builder()
+        .user_agent("Mozilla/5.0 (compatible; Musubi/0.1)")
+        .timeout(config.css_timeout)
+        .build()?;
+
+    let response = client.get(url.as_str()).send()?;
+
+    // Check size before reading full body
+    if let Some(content_length) = response.content_length() {
+        if content_length as usize > config.css_max_size {
+            anyhow::bail!(
+                "CSS too large: {} bytes (max {})",
+                content_length,
+                config.css_max_size
+            );
+        }
+    }
+
+    let css = response.text()?;
+
+    // Check actual size
+    if css.len() > config.css_max_size {
+        anyhow::bail!(
+            "CSS too large: {} bytes (max {})",
+            css.len(),
+            config.css_max_size
+        );
+    }
+
+    Ok(css)
+}
+
 /// Process HTML for archival: inline CSS, strip scripts
 /// Returns processed HTML string ready to save
 pub fn archive_page(

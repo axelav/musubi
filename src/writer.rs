@@ -64,11 +64,11 @@ pub fn write_link_file(
 
     // Build content
     let mut content = String::new();
-    content.push_str(&format!("---\n"));
+    content.push_str("---\n");
     content.push_str(&format!("title: {}\n", title));
     content.push_str(&format!("date: {}\n", iso_date));
     content.push_str(&format!("url: {}\n", url));
-    content.push_str(&format!("---\n\n"));
+    content.push_str("---\n\n");
     content.push_str(&format!("## {}\n\n", title));
     content.push_str(&format!("{}\n\n", url));
 

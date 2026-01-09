@@ -72,6 +72,7 @@ pub fn write_link_file(
     content.push_str(&format!("## {}\n\n", title));
     content.push_str(&format!("{}\n\n", url));
 
+    // FIXME: summary should be formatted as blockquote
     if let Some(summary_text) = summary {
         content.push_str(&format!("{}\n\n", summary_text));
     }

@@ -1,5 +1,5 @@
-use musubi::archive::ArchiveConfig;
 use musubi::archive::archive_page;
+use musubi::archive::ArchiveConfig;
 use std::time::Duration;
 use url::Url;
 
@@ -42,7 +42,10 @@ fn test_strips_self_closing_script_tags() {
 
     assert!(!result.contains("<script"));
     assert!(result.contains("Before"));
-    assert!(result.contains("After"), "Content after self-closing script tag should be preserved");
+    assert!(
+        result.contains("After"),
+        "Content after self-closing script tag should be preserved"
+    );
 }
 
 #[test]

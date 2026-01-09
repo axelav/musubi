@@ -4,11 +4,29 @@ use url::Url;
 
 /// List of HTML event handler attributes to remove
 const EVENT_HANDLERS: &[&str] = &[
-    "onclick", "ondblclick", "onmousedown", "onmouseup", "onmouseover",
-    "onmousemove", "onmouseout", "onmouseenter", "onmouseleave",
-    "onload", "onunload", "onchange", "onsubmit", "onreset", "onselect",
-    "onblur", "onfocus", "onkeydown", "onkeypress", "onkeyup",
-    "onerror", "onresize", "onscroll",
+    "onclick",
+    "ondblclick",
+    "onmousedown",
+    "onmouseup",
+    "onmouseover",
+    "onmousemove",
+    "onmouseout",
+    "onmouseenter",
+    "onmouseleave",
+    "onload",
+    "onunload",
+    "onchange",
+    "onsubmit",
+    "onreset",
+    "onselect",
+    "onblur",
+    "onfocus",
+    "onkeydown",
+    "onkeypress",
+    "onkeyup",
+    "onerror",
+    "onresize",
+    "onscroll",
 ];
 
 /// Configuration for HTML archival processing
@@ -115,6 +133,8 @@ fn strip_scripts_and_handlers(html: &str) -> String {
     result
 }
 
+// FIXME: This function is not used currently
+
 /// Find all external CSS links in HTML
 fn find_css_links(html: &str) -> Vec<String> {
     use scraper::{Html, Selector};
@@ -124,9 +144,7 @@ fn find_css_links(html: &str) -> Vec<String> {
 
     document
         .select(&link_selector)
-        .filter_map(|element| {
-            element.value().attr("href").map(|s| s.to_string())
-        })
+        .filter_map(|element| element.value().attr("href").map(|s| s.to_string()))
         .collect()
 }
 
@@ -184,9 +202,10 @@ fn inline_stylesheets(
     let links: Vec<_> = document
         .select(&link_selector)
         .filter_map(|element| {
-            element.value().attr("href").map(|href| {
-                (href.to_string(), element.html())
-            })
+            element
+                .value()
+                .attr("href")
+                .map(|href| (href.to_string(), element.html()))
         })
         .collect();
 
@@ -235,11 +254,7 @@ fn inline_stylesheets(
 
 /// Process HTML for archival: inline CSS, strip scripts
 /// Returns processed HTML string ready to save
-pub fn archive_page(
-    html: &str,
-    base_url: &Url,
-    config: &ArchiveConfig,
-) -> Result<String> {
+pub fn archive_page(html: &str, base_url: &Url, config: &ArchiveConfig) -> Result<String> {
     // Strip scripts and handlers
     let mut processed = strip_scripts_and_handlers(html);
 

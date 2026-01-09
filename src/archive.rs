@@ -170,6 +170,8 @@ fn fetch_css(url: &Url, config: &ArchiveConfig) -> Result<String> {
     }
 
     let css = response.text()?;
+    // Normalize line endings (CRLF -> LF) to prevent ^M characters on Unix
+    let css = css.replace("\r\n", "\n");
 
     // Check actual size
     if css.len() > config.css_max_size {
@@ -255,8 +257,11 @@ fn inline_stylesheets(
 /// Process HTML for archival: inline CSS, strip scripts
 /// Returns processed HTML string ready to save
 pub fn archive_page(html: &str, base_url: &Url, config: &ArchiveConfig) -> Result<String> {
+    // Normalize line endings first (CRLF -> LF)
+    let normalized = html.replace("\r\n", "\n");
+
     // Strip scripts and handlers
-    let mut processed = strip_scripts_and_handlers(html);
+    let mut processed = strip_scripts_and_handlers(&normalized);
 
     // Inline CSS
     let (inlined, failures) = inline_stylesheets(&processed, base_url, config);

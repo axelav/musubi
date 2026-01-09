@@ -138,3 +138,18 @@ fn test_inline_css_preserves_inline_styles() {
     assert!(result.contains("body { color: blue; }"));
     assert!(result.contains("<style>"));
 }
+
+#[test]
+fn test_archive_page_handles_input_with_crlf() {
+    // Simulate HTML with Windows-style CRLF line endings
+    let html = "<html>\r\n<head>\r\n<title>Test</title>\r\n</head>\r\n<body>\r\n<p>Content</p>\r\n</body>\r\n</html>";
+
+    let base_url = Url::parse("https://example.com").unwrap();
+    let config = ArchiveConfig::default();
+    let result = archive_page(html, &base_url, &config).unwrap();
+
+    // Verify CRLF was normalized - result should not contain \r
+    assert!(!result.contains('\r'), "Result should not contain carriage return characters");
+    assert!(result.contains("Content"), "Content should be preserved");
+    assert!(result.contains("<p>"), "HTML structure should be preserved");
+}

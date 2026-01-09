@@ -62,6 +62,8 @@ pub fn fetch_page(url: &str) -> Result<FetchedPage> {
         .context(format!("Failed to fetch URL: {}", cleaned_url))?;
 
     let html = response.text().context("Failed to read response body")?;
+    // Normalize line endings (CRLF -> LF) to prevent ^M characters on Unix
+    let html = html.replace("\r\n", "\n");
 
     Ok(FetchedPage {
         original_url: url.to_string(),

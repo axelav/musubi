@@ -121,3 +121,17 @@ fn test_strips_single_quoted_event_handlers() {
     assert!(result.contains("Click me"));
     assert!(result.contains("Content"));
 }
+
+#[test]
+fn test_inline_css_preserves_inline_styles() {
+    let html = r#"<html><head>
+        <style>body { color: blue; }</style>
+    </head><body></body></html>"#;
+
+    let base_url = Url::parse("https://example.com").unwrap();
+    let config = ArchiveConfig::default();
+    let result = archive_page(html, &base_url, &config).unwrap();
+
+    assert!(result.contains("body { color: blue; }"));
+    assert!(result.contains("<style>"));
+}

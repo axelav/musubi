@@ -165,14 +165,93 @@ fn fetch_css(url: &Url, config: &ArchiveConfig) -> Result<String> {
     Ok(css)
 }
 
+/// Inline external CSS stylesheets into HTML
+/// Returns modified HTML and list of failures (url, error_message)
+fn inline_stylesheets(
+    html: &str,
+    base_url: &Url,
+    config: &ArchiveConfig,
+) -> (String, Vec<(String, String)>) {
+    use scraper::{Html, Selector};
+
+    let document = Html::parse_document(html);
+    let link_selector = Selector::parse("link[rel='stylesheet']").unwrap();
+
+    let mut result = html.to_string();
+    let mut failures = Vec::new();
+
+    // Collect all stylesheet links
+    let links: Vec<_> = document
+        .select(&link_selector)
+        .filter_map(|element| {
+            element.value().attr("href").map(|href| {
+                (href.to_string(), element.html())
+            })
+        })
+        .collect();
+
+    // Process each link
+    for (href, original_tag) in links {
+        // Resolve URL
+        let css_url = match base_url.join(&href) {
+            Ok(url) => url,
+            Err(e) => {
+                failures.push((href.clone(), format!("Invalid URL: {}", e)));
+                continue;
+            }
+        };
+
+        // Fetch CSS
+        match fetch_css(&css_url, config) {
+            Ok(css_content) => {
+                // Create inline style tag
+                let inline_tag = format!(
+                    "<style>/* from: {} */\n{}</style>",
+                    css_url.as_str(),
+                    css_content
+                );
+
+                // Replace link tag with inline style
+                result = result.replace(&original_tag, &inline_tag);
+            }
+            Err(e) => {
+                // Record failure and remove link tag
+                let error_msg = format!("{}", e);
+                failures.push((css_url.to_string(), error_msg.clone()));
+
+                // Add HTML comment and remove link
+                let comment = format!(
+                    "<!-- Failed to inline stylesheet: {} ({}) -->",
+                    css_url.as_str(),
+                    error_msg
+                );
+                result = result.replace(&original_tag, &comment);
+            }
+        }
+    }
+
+    (result, failures)
+}
+
 /// Process HTML for archival: inline CSS, strip scripts
 /// Returns processed HTML string ready to save
 pub fn archive_page(
     html: &str,
-    _base_url: &Url,
-    _config: &ArchiveConfig,
+    base_url: &Url,
+    config: &ArchiveConfig,
 ) -> Result<String> {
-    let processed = strip_scripts_and_handlers(html);
+    // Strip scripts and handlers
+    let mut processed = strip_scripts_and_handlers(html);
+
+    // Inline CSS
+    let (inlined, failures) = inline_stylesheets(&processed, base_url, config);
+    processed = inlined;
+
+    // Log failures to stderr
+    for (url, error) in failures {
+        eprintln!("Warning: Failed to fetch CSS: {}: {}", url, error);
+    }
+
     Ok(processed)
 }
 

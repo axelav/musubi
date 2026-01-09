@@ -2,10 +2,10 @@
 name = "musubi"
 version = "0.1.0"
 edition = "2021"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Axel Anderson <axel@ftml.net>"]
 description = "Save and summarize web links to markdown files"
 license = "MIT"
-repository = "https://github.com/yourusername/musubi"
+repository = "https://github.com/axelav/musubi"
 keywords = ["cli", "markdown", "llm", "bookmarks"]
 categories = ["command-line-utilities"]
 

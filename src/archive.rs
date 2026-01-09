@@ -158,4 +158,36 @@ mod tests {
         assert!(links.contains(&"style.css".to_string()));
         assert!(links.contains(&"/css/theme.css".to_string()));
     }
+
+    #[test]
+    fn test_resolve_css_url_relative() {
+        let base = Url::parse("https://example.com/blog/post").unwrap();
+        let relative = "styles.css";
+        let resolved = base.join(relative).unwrap();
+        assert_eq!(resolved.as_str(), "https://example.com/blog/styles.css");
+    }
+
+    #[test]
+    fn test_resolve_css_url_absolute_path() {
+        let base = Url::parse("https://example.com/blog/post").unwrap();
+        let absolute = "/css/style.css";
+        let resolved = base.join(absolute).unwrap();
+        assert_eq!(resolved.as_str(), "https://example.com/css/style.css");
+    }
+
+    #[test]
+    fn test_resolve_css_url_protocol_relative() {
+        let base = Url::parse("https://example.com/page").unwrap();
+        let proto_rel = "//cdn.example.com/style.css";
+        let resolved = base.join(proto_rel).unwrap();
+        assert_eq!(resolved.as_str(), "https://cdn.example.com/style.css");
+    }
+
+    #[test]
+    fn test_resolve_css_url_already_absolute() {
+        let base = Url::parse("https://example.com/page").unwrap();
+        let absolute = "https://cdn.example.com/style.css";
+        let resolved = base.join(absolute).unwrap();
+        assert_eq!(resolved.as_str(), "https://cdn.example.com/style.css");
+    }
 }

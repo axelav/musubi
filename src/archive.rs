@@ -115,6 +115,21 @@ fn strip_scripts_and_handlers(html: &str) -> String {
     result
 }
 
+/// Find all external CSS links in HTML
+fn find_css_links(html: &str) -> Vec<String> {
+    use scraper::{Html, Selector};
+
+    let document = Html::parse_document(html);
+    let link_selector = Selector::parse("link[rel='stylesheet']").unwrap();
+
+    document
+        .select(&link_selector)
+        .filter_map(|element| {
+            element.value().attr("href").map(|s| s.to_string())
+        })
+        .collect()
+}
+
 /// Process HTML for archival: inline CSS, strip scripts
 /// Returns processed HTML string ready to save
 pub fn archive_page(
@@ -124,4 +139,23 @@ pub fn archive_page(
 ) -> Result<String> {
     let processed = strip_scripts_and_handlers(html);
     Ok(processed)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_find_css_links_basic() {
+        let html = r#"<html><head>
+            <link rel="stylesheet" href="style.css">
+            <link rel="stylesheet" href="/css/theme.css">
+            <link rel="icon" href="favicon.ico">
+        </head></html>"#;
+
+        let links = find_css_links(html);
+        assert_eq!(links.len(), 2);
+        assert!(links.contains(&"style.css".to_string()));
+        assert!(links.contains(&"/css/theme.css".to_string()));
+    }
 }

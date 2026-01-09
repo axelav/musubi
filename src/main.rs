@@ -17,6 +17,10 @@ struct Cli {
     /// Override links directory (default: $MUSUBI_LINKS_DIR or ~/links)
     #[arg(short, long)]
     dir: Option<PathBuf>,
+
+    /// Save archived HTML version alongside markdown summary
+    #[arg(short = 'a', long = "archive")]
+    archive: bool,
 }
 
 fn main() -> Result<()> {

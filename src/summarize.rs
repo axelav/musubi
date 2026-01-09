@@ -145,12 +145,129 @@ fn truncate_content(content: &str, max_chars: usize) -> String {
     }
 }
 
+pub struct OpenAIProvider {
+    api_key: String,
+}
+
+impl OpenAIProvider {
+    pub fn new(api_key: String) -> Self {
+        Self { api_key }
+    }
+}
+
+#[derive(Serialize)]
+struct OpenAIRequest {
+    model: String,
+    messages: Vec<OpenAIMessage>,
+    functions: Vec<OpenAIFunction>,
+    function_call: OpenAIFunctionCall,
+}
+
+#[derive(Serialize)]
+struct OpenAIMessage {
+    role: String,
+    content: String,
+}
+
+#[derive(Serialize)]
+struct OpenAIFunction {
+    name: String,
+    description: String,
+    parameters: serde_json::Value,
+}
+
+#[derive(Serialize)]
+struct OpenAIFunctionCall {
+    name: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct OpenAIResponse {
+    choices: Vec<OpenAIChoice>,
+}
+
+#[derive(Deserialize, Debug)]
+struct OpenAIChoice {
+    message: OpenAIResponseMessage,
+}
+
+#[derive(Deserialize, Debug)]
+struct OpenAIResponseMessage {
+    function_call: Option<OpenAIFunctionCallResponse>,
+}
+
+#[derive(Deserialize, Debug)]
+struct OpenAIFunctionCallResponse {
+    arguments: String,
+}
+
+impl LlmProvider for OpenAIProvider {
+    fn generate_summary(&self, title: &str, content: &str) -> Result<Summary> {
+        let truncated_content = truncate_content(content, 4000);
+
+        let prompt = format!(
+            "Given this webpage, generate a summary and relevant tags:\n\nTitle: {}\n\nContent: {}",
+            title, truncated_content
+        );
+
+        let schema = schemars::schema_for!(Summary);
+        let schema_json = serde_json::to_value(schema).context("Failed to serialize schema")?;
+
+        let client = reqwest::blocking::Client::new();
+        let request_body = OpenAIRequest {
+            model: "gpt-4o-mini".to_string(),
+            messages: vec![OpenAIMessage {
+                role: "user".to_string(),
+                content: prompt,
+            }],
+            functions: vec![OpenAIFunction {
+                name: "generate_summary".to_string(),
+                description: "Generate a summary and tags for a webpage".to_string(),
+                parameters: schema_json,
+            }],
+            function_call: OpenAIFunctionCall {
+                name: "generate_summary".to_string(),
+            },
+        };
+
+        let response = client
+            .post("https://api.openai.com/v1/chat/completions")
+            .header("Authorization", format!("Bearer {}", &self.api_key))
+            .header("content-type", "application/json")
+            .json(&request_body)
+            .send()
+            .context("Failed to send request to OpenAI API")?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().unwrap_or_default();
+            return Err(anyhow!("OpenAI API error ({}): {}", status, error_text));
+        }
+
+        let openai_response: OpenAIResponse = response
+            .json()
+            .context("Failed to parse OpenAI response")?;
+
+        if let Some(choice) = openai_response.choices.first() {
+            if let Some(function_call) = &choice.message.function_call {
+                let summary: Summary = serde_json::from_str(&function_call.arguments)
+                    .context("Failed to parse summary from function call")?;
+                return Ok(summary);
+            }
+        }
+
+        Err(anyhow!("No function call found in OpenAI response"))
+    }
+}
+
 pub fn create_provider(
     anthropic_key: Option<String>,
-    _openai_key: Option<String>,
+    openai_key: Option<String>,
 ) -> Result<Box<dyn LlmProvider>> {
     if let Some(key) = anthropic_key {
         Ok(Box::new(AnthropicProvider::new(key)))
+    } else if let Some(key) = openai_key {
+        Ok(Box::new(OpenAIProvider::new(key)))
     } else {
         Err(anyhow!(
             "No LLM API key found. Set ANTHROPIC_API_KEY or OPENAI_API_KEY environment variable."

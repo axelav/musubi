@@ -56,7 +56,7 @@ LLM-generated summary of the page content in 2-3 sentences.
 
 ## Features
 
-- Automatic tracking parameter removal (utm_*, fbclid, etc.)
+- Automatic tracking parameter removal (utm\_\*, fbclid, etc.)
 - LLM-generated summaries using Claude or ChatGPT
 - Automatic tag generation
 - Graceful degradation (saves without summary if LLM fails)

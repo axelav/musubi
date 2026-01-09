@@ -2,6 +2,15 @@ use anyhow::Result;
 use std::time::Duration;
 use url::Url;
 
+/// List of HTML event handler attributes to remove
+const EVENT_HANDLERS: &[&str] = &[
+    "onclick", "ondblclick", "onmousedown", "onmouseup", "onmouseover",
+    "onmousemove", "onmouseout", "onmouseenter", "onmouseleave",
+    "onload", "onunload", "onchange", "onsubmit", "onreset", "onselect",
+    "onblur", "onfocus", "onkeydown", "onkeypress", "onkeyup",
+    "onerror", "onresize", "onscroll",
+];
+
 /// Configuration for HTML archival processing
 #[derive(Debug, Clone)]
 pub struct ArchiveConfig {
@@ -20,8 +29,8 @@ impl Default for ArchiveConfig {
     }
 }
 
-/// Remove all script tags from HTML document
-fn strip_scripts(html: &str) -> String {
+/// Remove all script tags and event handlers from HTML
+fn strip_scripts_and_handlers(html: &str) -> String {
     let mut result = String::new();
     let mut remaining = html;
 
@@ -60,6 +69,35 @@ fn strip_scripts(html: &str) -> String {
 
     // Add any remaining content after the last script tag
     result.push_str(remaining);
+
+    // Remove event handler attributes
+    for handler in EVENT_HANDLERS {
+        // Match pattern: handler="anything" or handler='anything'
+        let pattern_double = format!(r#"{}=""#, handler);
+        let pattern_single = format!(r#"{}='"#, handler);
+
+        // Simple removal: find and remove handler="..." or handler='...'
+        loop {
+            let pos_double = result.find(&pattern_double);
+            let pos_single = result.find(&pattern_single);
+
+            if pos_double.is_none() && pos_single.is_none() {
+                break;
+            }
+
+            if let Some(pos) = pos_double.or(pos_single) {
+                let quote = if result[pos..].starts_with(&pattern_double) { '"' } else { '\'' };
+                if let Some(end) = result[pos..].find(quote).and_then(|start| {
+                    result[pos + start + 1..].find(quote).map(|end| pos + start + 1 + end + 1)
+                }) {
+                    result.replace_range(pos..end, "");
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+
     result
 }
 
@@ -70,6 +108,6 @@ pub fn archive_page(
     _base_url: &Url,
     _config: &ArchiveConfig,
 ) -> Result<String> {
-    let processed = strip_scripts(html);
+    let processed = strip_scripts_and_handlers(html);
     Ok(processed)
 }

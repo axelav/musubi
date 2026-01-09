@@ -81,3 +81,23 @@ fn test_strips_mixed_case_script_tags() {
     assert!(result.contains("Middle"));
     assert!(result.contains("After"));
 }
+
+#[test]
+fn test_strips_event_handlers() {
+    let html = r##"<html><body>
+        <button onclick="alert('click')">Click me</button>
+        <div onload="init()" onmouseover="hover()">Content</div>
+        <a href="#" onmousedown="track()">Link</a>
+    </body></html>"##;
+
+    let base_url = Url::parse("https://example.com").unwrap();
+    let config = ArchiveConfig::default();
+    let result = archive_page(html, &base_url, &config).unwrap();
+
+    assert!(!result.contains("onclick"));
+    assert!(!result.contains("onload"));
+    assert!(!result.contains("onmouseover"));
+    assert!(!result.contains("onmousedown"));
+    assert!(result.contains("Click me"));
+    assert!(result.contains("Content"));
+}

@@ -137,11 +137,16 @@ impl LlmProvider for AnthropicProvider {
     }
 }
 
-fn truncate_content(content: &str, max_chars: usize) -> String {
-    if content.len() <= max_chars {
+fn truncate_content(content: &str, max_bytes: usize) -> String {
+    if content.len() <= max_bytes {
         content.to_string()
     } else {
-        format!("{}...", &content[..max_chars])
+        // Find the largest valid char boundary at or before max_bytes
+        let mut end = max_bytes;
+        while !content.is_char_boundary(end) {
+            end -= 1;
+        }
+        format!("{}...", &content[..end])
     }
 }
 
@@ -272,5 +277,40 @@ pub fn create_provider(
         Err(anyhow!(
             "No LLM API key found. Set ANTHROPIC_API_KEY or OPENAI_API_KEY environment variable."
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_truncate_content_with_multibyte_chars() {
+        // Create a string where byte 4000 falls inside a multi-byte character
+        // Use "a" (1 byte) repeated 3998 times, then "'" (3 bytes: e2 80 99)
+        let mut content = "a".repeat(3998);
+        content.push('\u{2019}'); // Right single quotation mark - 3-byte UTF-8 character
+        content.push_str("more content");
+
+        // This should NOT panic - it should truncate at a valid char boundary
+        let result = truncate_content(&content, 4000);
+
+        // Should truncate before the multi-byte char
+        assert_eq!(result.len(), 3998 + 3); // 3998 'a's + "..."
+        assert!(result.ends_with("..."));
+    }
+
+    #[test]
+    fn test_truncate_content_short_string() {
+        let content = "short";
+        let result = truncate_content(content, 100);
+        assert_eq!(result, "short");
+    }
+
+    #[test]
+    fn test_truncate_content_exact_boundary() {
+        let content = "a".repeat(4000);
+        let result = truncate_content(&content, 4000);
+        assert_eq!(result, content);
     }
 }

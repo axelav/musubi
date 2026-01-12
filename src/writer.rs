@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local, Utc};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -24,7 +24,8 @@ pub fn sanitize_filename(title: &str) -> String {
 }
 
 fn generate_filename(date: &DateTime<Utc>, title: &str) -> String {
-    let date_str = date.format("%Y-%m-%d").to_string();
+    let local_date = date.with_timezone(&Local);
+    let date_str = local_date.format("%Y-%m-%d").to_string();
     let sanitized_title = sanitize_filename(title);
     format!("{} {}.md", date_str, sanitized_title)
 }
@@ -60,7 +61,8 @@ pub fn write_link_file(
 
     // Format date for content
     let iso_date = date.to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
-    let wiki_date = date.format("%Y-%m-%d").to_string();
+    let local_date = date.with_timezone(&Local);
+    let wiki_date = local_date.format("%Y-%m-%d").to_string();
 
     // Build content
     let mut content = String::new();
@@ -110,7 +112,8 @@ mod tests {
     fn test_generate_filename() {
         let date = Utc::now();
         let filename = generate_filename(&date, "Test Title");
-        let date_str = date.format("%Y-%m-%d").to_string();
+        let local_date = date.with_timezone(&Local);
+        let date_str = local_date.format("%Y-%m-%d").to_string();
         assert_eq!(filename, format!("{} Test Title.md", date_str));
     }
 

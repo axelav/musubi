@@ -7,6 +7,7 @@ pub struct Config {
     pub anthropic_key: Option<String>,
     pub openai_key: Option<String>,
     pub links_dir: PathBuf,
+    pub now_dir: PathBuf,
 }
 
 impl Config {
@@ -14,17 +15,22 @@ impl Config {
         let anthropic_key = env::var("ANTHROPIC_API_KEY").ok();
         let openai_key = env::var("OPENAI_API_KEY").ok();
 
-        let links_dir = if let Ok(dir) = env::var("MUSUBI_LINKS_DIR") {
-            PathBuf::from(dir)
-        } else {
-            let home = env::var("HOME").context("HOME environment variable not set")?;
-            PathBuf::from(home).join("links")
-        };
+        let home = env::var("HOME").context("HOME environment variable not set")?;
+        let home_path = PathBuf::from(&home);
+
+        let links_dir = env::var("MUSUBI_LINKS_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| home_path.join("links"));
+
+        let now_dir = env::var("MUSUBI_NOW_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| home_path.join("now"));
 
         Ok(Config {
             anthropic_key,
             openai_key,
             links_dir,
+            now_dir,
         })
     }
 

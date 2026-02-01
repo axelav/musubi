@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
-use clap::Parser;
-use musubi::archive;
+use clap::{Parser, Subcommand};
 use musubi::config::Config;
 use musubi::fetch;
+use musubi::now;
 use musubi::parse;
 use musubi::summarize;
 use musubi::writer;
@@ -13,36 +13,122 @@ use std::path::PathBuf;
 #[command(name = "musubi")]
 #[command(about = "Save and summarize web links to markdown", long_about = None)]
 struct Cli {
-    /// URL to save
-    url: String,
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
 
-    /// Override links directory (default: $MUSUBI_LINKS_DIR or ~/links)
-    #[arg(short, long)]
-    dir: Option<PathBuf>,
+#[derive(Subcommand)]
+enum Commands {
+    /// Create a timestamped note file
+    Now {
+        /// Note title (defaults to current time if omitted)
+        title: Option<String>,
 
-    /// Save archived HTML version alongside markdown summary
-    #[arg(short = 'a', long = "archive")]
-    archive: bool,
+        /// Override output directory
+        #[arg(short, long)]
+        dir: Option<PathBuf>,
 
-    /// Custom prompt for summary generation (default: "Provide a 2-3 sentence summary")
-    #[arg(short, long)]
-    prompt: Option<String>,
+        /// Create file without opening editor
+        #[arg(long)]
+        no_edit: bool,
+    },
+    /// Save a web link (default command)
+    #[command(hide = true)]
+    Link {
+        /// URL to save
+        url: String,
+
+        /// Override links directory
+        #[arg(short, long)]
+        dir: Option<PathBuf>,
+
+        /// Save archived HTML version
+        #[arg(short = 'a', long = "archive")]
+        archive: bool,
+
+        /// Custom prompt for summary generation
+        #[arg(short, long)]
+        prompt: Option<String>,
+    },
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    // Load configuration
-    let mut config = Config::from_env().context("Failed to load configuration")?;
+    let config = Config::from_env().context("Failed to load configuration")?;
 
-    // Override directory if provided
-    if let Some(dir) = cli.dir {
-        config.links_dir = dir;
+    match cli.command {
+        Some(Commands::Now {
+            title,
+            dir,
+            no_edit,
+        }) => run_now(config, title, dir, no_edit),
+        Some(Commands::Link { url, dir, archive, prompt }) => run_link(config, url, dir, archive, prompt),
+        None => {
+            // No subcommand: check if first arg looks like URL
+            let args: Vec<String> = std::env::args().collect();
+            if args.len() > 1 && (args[1].starts_with("http://") || args[1].starts_with("https://"))
+            {
+                // Re-parse as link command
+                let url = args[1].clone();
+                let dir = args
+                    .iter()
+                    .position(|a| a == "-d" || a == "--dir")
+                    .and_then(|i| args.get(i + 1))
+                    .map(PathBuf::from);
+                let archive = args.iter().any(|a| a == "-a" || a == "--archive");
+                let prompt = args
+                    .iter()
+                    .position(|a| a == "-p" || a == "--prompt")
+                    .and_then(|i| args.get(i + 1))
+                    .cloned();
+                run_link(config, url, dir, archive, prompt)
+            } else {
+                // Show help
+                use clap::CommandFactory;
+                Cli::command().print_help()?;
+                Ok(())
+            }
+        }
+    }
+}
+
+fn run_now(
+    config: Config,
+    title: Option<String>,
+    dir: Option<PathBuf>,
+    no_edit: bool,
+) -> Result<()> {
+    let output_dir = dir.unwrap_or(config.now_dir);
+
+    let (file_path, editor_launched) =
+        now::create_now_file(&output_dir, title.as_deref(), !no_edit)?;
+
+    if no_edit {
+        eprintln!("✓ Created: {}", file_path.display());
+    } else if !editor_launched {
+        eprintln!("No editor set. File created at: {}", file_path.display());
+    } else {
+        eprintln!("✓ Created: {}", file_path.display());
+    }
+
+    Ok(())
+}
+
+fn run_link(
+    mut config: Config,
+    url: String,
+    dir: Option<PathBuf>,
+    archive: bool,
+    prompt: Option<String>,
+) -> Result<()> {
+    if let Some(d) = dir {
+        config.links_dir = d;
     }
 
     // Fetch page
-    println!("⏳ Fetching: {}", cli.url);
-    let page = fetch::fetch_page(&cli.url).context("Failed to fetch page")?;
+    println!("⏳ Fetching: {}", url);
+    let page = fetch::fetch_page(&url).context("Failed to fetch page")?;
 
     // Parse metadata
     let metadata = parse::extract_metadata(&page.html, &page.cleaned_url)
@@ -54,10 +140,8 @@ fn main() -> Result<()> {
     let (summary_text, tags) = if config.has_llm_key() {
         match summarize::create_provider(config.anthropic_key, config.openai_key) {
             Ok(provider) => {
-                // Extract text content from HTML for summarization
                 let text_content = extract_text_content(&page.html);
-
-                match provider.generate_summary(&metadata.title, &text_content, cli.prompt.as_deref()) {
+                match provider.generate_summary(&metadata.title, &text_content, prompt.as_deref()) {
                     Ok(summary) => {
                         println!("✓ Generated summary");
                         (Some(summary.summary), summary.tags)
@@ -92,11 +176,11 @@ fn main() -> Result<()> {
     println!("✓ Saved: {}", file_path.display());
 
     // Archive HTML if requested
-    if cli.archive {
-        match archive::archive_page(
+    if archive {
+        match musubi::archive::archive_page(
             &page.html,
             &url::Url::parse(&page.cleaned_url)?,
-            &archive::ArchiveConfig::default(),
+            &musubi::archive::ArchiveConfig::default(),
         ) {
             Ok(archived_html) => {
                 let html_path = writer::get_html_path(&file_path);
@@ -107,7 +191,6 @@ fn main() -> Result<()> {
             }
             Err(e) => {
                 eprintln!("⚠ Failed to archive page: {}", e);
-                // Markdown already saved, continue
             }
         }
     }
@@ -120,7 +203,6 @@ fn extract_text_content(html: &str) -> String {
 
     let document = Html::parse_document(html);
 
-    // Try to get main content (common tags)
     let content_selectors = vec![
         "article",
         "main",
@@ -141,6 +223,5 @@ fn extract_text_content(html: &str) -> String {
         }
     }
 
-    // Fallback: get all text
     document.root_element().text().collect::<Vec<_>>().join(" ")
 }

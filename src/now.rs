@@ -85,21 +85,26 @@ pub fn create_now_file(
 
     let editor_launched = match std::env::var("EDITOR") {
         Ok(editor) => {
-            // Use shell to handle EDITOR with arguments (e.g., "code --wait")
-            let status = if cfg!(windows) {
-                Command::new("cmd")
-                    .arg("/C")
-                    .arg(format!("{} \"{}\"", editor, file_path.display()))
-                    .status()
-            } else {
-                Command::new("sh")
-                    .arg("-c")
-                    .arg(format!("{} \"$1\"", editor))
-                    .arg("editor")
-                    .arg(&file_path)
-                    .status()
+            // Parse EDITOR to handle arguments safely (e.g., "code --wait")
+            let parts = shlex::split(&editor).ok_or_else(|| {
+                anyhow::anyhow!("Failed to parse EDITOR environment variable: {}", editor)
+            })?;
+
+            if parts.is_empty() {
+                anyhow::bail!("EDITOR environment variable is empty after parsing");
             }
-            .context(format!("Failed to launch editor: {}", editor))?;
+
+            let program = &parts[0];
+            let args: Vec<&str> = parts[1..].iter().map(|s| s.as_str()).collect();
+
+            // Build command without shell to avoid injection
+            let mut cmd = Command::new(program);
+            cmd.args(args);
+            cmd.arg(&file_path);
+
+            let status = cmd
+                .status()
+                .context(format!("Failed to launch editor: {}", editor))?;
 
             if !status.success() {
                 if let Some(code) = status.code() {

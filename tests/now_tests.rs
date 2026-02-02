@@ -111,8 +111,8 @@ fn test_yaml_escaping_quotes_in_title() {
     let content = fs::read_to_string(&path).unwrap();
     let yaml_title = extract_yaml_title(&content).unwrap();
     
-    // Title with quotes should escape them
-    assert!(yaml_title.contains(r#"\""#));
+    // Title with quotes should be wrapped in quotes with escaped internal quotes
+    assert_eq!(yaml_title, r#""My \"quoted\" title""#);
 }
 
 #[test]

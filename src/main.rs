@@ -14,26 +14,12 @@ use std::path::PathBuf;
 #[command(about = "Save and summarize web links to markdown", long_about = None)]
 struct Cli {
     #[command(subcommand)]
-    command: Option<Commands>,
+    command: Commands,
 }
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Create a timestamped note file
-    Now {
-        /// Note title (defaults to current time if omitted)
-        title: Option<String>,
-
-        /// Override output directory
-        #[arg(short, long)]
-        dir: Option<PathBuf>,
-
-        /// Create file without opening editor
-        #[arg(long)]
-        no_edit: bool,
-    },
-    /// Save a web link (default command)
-    #[command(hide = true)]
+    /// Save a web link as markdown
     Link {
         /// URL to save
         url: String,
@@ -50,46 +36,28 @@ enum Commands {
         #[arg(short, long)]
         prompt: Option<String>,
     },
+    /// Create a timestamped note file
+    Now {
+        /// Note title (defaults to current time if omitted)
+        title: Option<String>,
+
+        /// Override output directory
+        #[arg(short, long)]
+        dir: Option<PathBuf>,
+
+        /// Create file without opening editor
+        #[arg(long)]
+        no_edit: bool,
+    },
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-
     let config = Config::from_env().context("Failed to load configuration")?;
 
     match cli.command {
-        Some(Commands::Now {
-            title,
-            dir,
-            no_edit,
-        }) => run_now(config, title, dir, no_edit),
-        Some(Commands::Link { url, dir, archive, prompt }) => run_link(config, url, dir, archive, prompt),
-        None => {
-            // No subcommand: check if first arg looks like URL
-            let args: Vec<String> = std::env::args().collect();
-            if args.len() > 1 && (args[1].starts_with("http://") || args[1].starts_with("https://"))
-            {
-                // Re-parse as link command
-                let url = args[1].clone();
-                let dir = args
-                    .iter()
-                    .position(|a| a == "-d" || a == "--dir")
-                    .and_then(|i| args.get(i + 1))
-                    .map(PathBuf::from);
-                let archive = args.iter().any(|a| a == "-a" || a == "--archive");
-                let prompt = args
-                    .iter()
-                    .position(|a| a == "-p" || a == "--prompt")
-                    .and_then(|i| args.get(i + 1))
-                    .cloned();
-                run_link(config, url, dir, archive, prompt)
-            } else {
-                // Show help
-                use clap::CommandFactory;
-                Cli::command().print_help()?;
-                Ok(())
-            }
-        }
+        Commands::Link { url, dir, archive, prompt } => run_link(config, url, dir, archive, prompt),
+        Commands::Now { title, dir, no_edit } => run_now(config, title, dir, no_edit),
     }
 }
 

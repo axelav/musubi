@@ -6,6 +6,41 @@ use std::process::Command;
 
 use crate::writer::{find_available_filename, sanitize_filename};
 
+/// Escape a string for use in YAML
+/// Wraps the string in double quotes if it contains special characters
+fn yaml_escape(s: &str) -> String {
+    // Check if the string needs escaping
+    let needs_escape = s.is_empty()
+        || s.starts_with(' ')
+        || s.ends_with(' ')
+        || s.contains(':')
+        || s.contains('#')
+        || s.contains('\n')
+        || s.contains('\r')
+        || s.contains('"')
+        || s.contains('\'')
+        || s.contains('\\')
+        || s.starts_with('-')
+        || s.starts_with('[')
+        || s.starts_with('{')
+        || s.starts_with('&')
+        || s.starts_with('*')
+        || s.starts_with('!')
+        || s.starts_with('|')
+        || s.starts_with('>')
+        || s.starts_with('%')
+        || s.starts_with('@')
+        || s.starts_with('`');
+
+    if !needs_escape {
+        return s.to_string();
+    }
+
+    // Escape the string by wrapping in double quotes and escaping internal quotes
+    let escaped = s.replace('\\', "\\\\").replace('"', "\\\"");
+    format!("\"{}\"", escaped)
+}
+
 /// Create a now file and optionally open in editor
 /// Returns the created file path and whether editor was launched
 pub fn create_now_file(
@@ -33,9 +68,10 @@ pub fn create_now_file(
 
     // Generate content
     let iso_date = now.to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+    let escaped_title = yaml_escape(&display_title);
     let content = format!(
         "---\ntitle: {}\ndate: {}\n---\n\n## {}\n\n",
-        display_title, iso_date, display_title
+        escaped_title, iso_date, display_title
     );
 
     // Write file
@@ -49,11 +85,21 @@ pub fn create_now_file(
 
     let editor_launched = match std::env::var("EDITOR") {
         Ok(editor) => {
-            let status = Command::new(&editor)
-                .arg("+")
-                .arg(&file_path)
-                .status()
-                .context(format!("Failed to launch editor: {}", editor))?;
+            // Use shell to handle EDITOR with arguments (e.g., "code --wait")
+            let status = if cfg!(windows) {
+                Command::new("cmd")
+                    .arg("/C")
+                    .arg(format!("{} \"{}\"", editor, file_path.display()))
+                    .status()
+            } else {
+                Command::new("sh")
+                    .arg("-c")
+                    .arg(format!("{} \"$1\"", editor))
+                    .arg("editor")
+                    .arg(&file_path)
+                    .status()
+            }
+            .context(format!("Failed to launch editor: {}", editor))?;
 
             if !status.success() {
                 if let Some(code) = status.code() {

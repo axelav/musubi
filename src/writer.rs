@@ -1,7 +1,15 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, Local, Utc};
+use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+#[derive(Serialize)]
+struct LinkFrontMatter {
+    title: String,
+    date: String,
+    url: String,
+}
 
 pub fn sanitize_filename(title: &str) -> String {
     let sanitized = title
@@ -64,12 +72,20 @@ pub fn write_link_file(
     let local_date = date.with_timezone(&Local);
     let wiki_date = local_date.format("%Y-%m-%d").to_string();
 
+    // Build YAML front matter using serde_yml for proper escaping
+    let front_matter = LinkFrontMatter {
+        title: title.to_string(),
+        date: iso_date.clone(),
+        url: url.to_string(),
+    };
+    
+    let yaml_str = serde_yml::to_string(&front_matter)
+        .context("Failed to serialize front matter to YAML")?;
+
     // Build content
     let mut content = String::new();
     content.push_str("---\n");
-    content.push_str(&format!("title: {}\n", title));
-    content.push_str(&format!("date: {}\n", iso_date));
-    content.push_str(&format!("url: {}\n", url));
+    content.push_str(&yaml_str);
     content.push_str("---\n\n");
     content.push_str(&format!("## {}\n\n", title));
     content.push_str(&format!("{}\n\n", url));

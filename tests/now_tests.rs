@@ -2,6 +2,25 @@ use musubi::now::create_now_file;
 use std::fs;
 use tempfile::TempDir;
 
+// Helper function to extract YAML front matter title value
+fn extract_yaml_title(content: &str) -> Option<String> {
+    let lines: Vec<&str> = content.lines().collect();
+    if lines.len() < 3 || lines[0] != "---" {
+        return None;
+    }
+    
+    for line in &lines[1..] {
+        if line.starts_with("title:") {
+            let title_part = line.strip_prefix("title:").unwrap().trim();
+            return Some(title_part.to_string());
+        }
+        if *line == "---" {
+            break;
+        }
+    }
+    None
+}
+
 #[test]
 fn test_create_now_file_with_title() {
     let temp_dir = TempDir::new().unwrap();
@@ -52,4 +71,71 @@ fn test_create_now_file_creates_directory() {
 
     assert!(path.exists());
     assert!(nested_dir.exists());
+}
+
+#[test]
+fn test_yaml_escaping_colon_in_title() {
+    let temp_dir = TempDir::new().unwrap();
+    let title = "Note: Important Meeting";
+    let (path, _) = create_now_file(temp_dir.path(), Some(title), false).unwrap();
+
+    let content = fs::read_to_string(&path).unwrap();
+    let yaml_title = extract_yaml_title(&content).unwrap();
+    
+    // serde_yml uses single quotes for titles with colons
+    assert_eq!(yaml_title, "'Note: Important Meeting'");
+}
+
+#[test]
+fn test_yaml_escaping_hash_in_title() {
+    let temp_dir = TempDir::new().unwrap();
+    let title = "Issue #123 Fix";
+    let (path, _) = create_now_file(temp_dir.path(), Some(title), false).unwrap();
+
+    let content = fs::read_to_string(&path).unwrap();
+    let yaml_title = extract_yaml_title(&content).unwrap();
+    
+    // serde_yml uses single quotes for titles with hash
+    assert_eq!(yaml_title, "'Issue #123 Fix'");
+}
+
+#[test]
+fn test_yaml_escaping_quotes_in_title() {
+    let temp_dir = TempDir::new().unwrap();
+    let title = r#"My "quoted" title"#;
+    let (path, _) = create_now_file(temp_dir.path(), Some(title), false).unwrap();
+
+    let content = fs::read_to_string(&path).unwrap();
+    let yaml_title = extract_yaml_title(&content).unwrap();
+    
+    // serde_yml preserves double quotes without escaping when not needed
+    assert_eq!(yaml_title, r#"My "quoted" title"#);
+}
+
+#[test]
+fn test_yaml_no_escaping_simple_title() {
+    let temp_dir = TempDir::new().unwrap();
+    let title = "Simple Title";
+    let (path, _) = create_now_file(temp_dir.path(), Some(title), false).unwrap();
+
+    let content = fs::read_to_string(&path).unwrap();
+    let yaml_title = extract_yaml_title(&content).unwrap();
+    
+    // Simple title should not be quoted
+    assert_eq!(yaml_title, "Simple Title");
+}
+
+#[test]
+fn test_yaml_escaping_backslash_and_quotes() {
+    let temp_dir = TempDir::new().unwrap();
+    let title = r#"path\to\"file""#;
+    let (path, _) = create_now_file(temp_dir.path(), Some(title), false).unwrap();
+
+    let content = fs::read_to_string(&path).unwrap();
+    let yaml_title = extract_yaml_title(&content).unwrap();
+    
+    // serde_yml escapes backslashes and quotes - the extracted value should match
+    // The YAML line will be: title: path\to\"file"
+    // When extracted, it should be: path\to\"file"
+    assert_eq!(yaml_title, r#"path\to\"file""#);
 }

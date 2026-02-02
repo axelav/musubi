@@ -57,7 +57,9 @@ pub fn create_now_file(
 
             if !status.success() {
                 if let Some(code) = status.code() {
-                    std::process::exit(code);
+                    anyhow::bail!("Editor exited with non-zero status code: {}", code);
+                } else {
+                    anyhow::bail!("Editor was terminated by signal");
                 }
             }
             true

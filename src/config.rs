@@ -15,16 +15,23 @@ impl Config {
         let anthropic_key = env::var("ANTHROPIC_API_KEY").ok();
         let openai_key = env::var("OPENAI_API_KEY").ok();
 
-        let home = env::var("HOME").context("HOME environment variable not set")?;
-        let home_path = PathBuf::from(&home);
+        // First, try to read explicit directories from the environment.
+        let links_dir_env = env::var("MUSUBI_LINKS_DIR").ok().map(PathBuf::from);
+        let now_dir_env = env::var("MUSUBI_NOW_DIR").ok().map(PathBuf::from);
 
-        let links_dir = env::var("MUSUBI_LINKS_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| home_path.join("links"));
+        // Only require HOME when we need to fall back to default locations.
+        let (links_dir, now_dir) = match (links_dir_env, now_dir_env) {
+            (Some(links_dir), Some(now_dir)) => (links_dir, now_dir),
+            (links_dir_opt, now_dir_opt) => {
+                let home = env::var("HOME").context("HOME environment variable not set")?;
+                let home_path = PathBuf::from(home);
 
-        let now_dir = env::var("MUSUBI_NOW_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| home_path.join("now"));
+                let links_dir = links_dir_opt.unwrap_or_else(|| home_path.join("links"));
+                let now_dir = now_dir_opt.unwrap_or_else(|| home_path.join("now"));
+
+                (links_dir, now_dir)
+            }
+        };
 
         Ok(Config {
             anthropic_key,

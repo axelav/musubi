@@ -134,8 +134,8 @@ fn test_yaml_escaping_backslash_and_quotes() {
     let content = fs::read_to_string(&path).unwrap();
     let yaml_title = extract_yaml_title(&content).unwrap();
     
-    // Verify the YAML library properly handles backslashes and quotes
-    // The exact format depends on serde_yml's escaping logic
-    assert!(yaml_title.contains(r#"path\"#) || yaml_title.contains("path"));
-    assert!(yaml_title.contains("file"));
+    // serde_yml escapes backslashes and quotes - the extracted value should match
+    // The YAML line will be: title: path\to\"file"
+    // When extracted, it should be: path\to\"file"
+    assert_eq!(yaml_title, r#"path\to\"file""#);
 }

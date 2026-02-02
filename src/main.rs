@@ -56,8 +56,17 @@ fn main() -> Result<()> {
     let config = Config::from_env().context("Failed to load configuration")?;
 
     match cli.command {
-        Commands::Link { url, dir, archive, prompt } => run_link(config, url, dir, archive, prompt),
-        Commands::Now { title, dir, no_edit } => run_now(config, title, dir, no_edit),
+        Commands::Link {
+            url,
+            dir,
+            archive,
+            prompt,
+        } => run_link(config, url, dir, archive, prompt),
+        Commands::Now {
+            title,
+            dir,
+            no_edit,
+        } => run_now(config, title, dir, no_edit),
     }
 }
 

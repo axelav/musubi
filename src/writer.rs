@@ -30,7 +30,7 @@ fn generate_filename(date: &DateTime<Utc>, title: &str) -> String {
     format!("{} {}.md", date_str, sanitized_title)
 }
 
-pub fn find_available_filename(dir: &Path, base_filename: &str) -> PathBuf {
+pub(crate) fn find_available_filename(dir: &Path, base_filename: &str) -> PathBuf {
     let mut path = dir.join(base_filename);
     let mut counter = 2;
 

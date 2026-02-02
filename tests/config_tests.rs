@@ -3,103 +3,113 @@ use std::env;
 
 #[test]
 fn test_config_reads_anthropic_key() {
-    env::set_var("ANTHROPIC_API_KEY", "test-key-123");
-    let config = Config::from_env().unwrap();
-    assert_eq!(config.anthropic_key, Some("test-key-123".to_string()));
-    env::remove_var("ANTHROPIC_API_KEY");
+    temp_env::with_vars([("ANTHROPIC_API_KEY", Some("test-key-123"))], || {
+        let config = Config::from_env().unwrap();
+        assert_eq!(config.anthropic_key, Some("test-key-123".to_string()));
+    });
 }
 
 #[test]
 fn test_config_reads_openai_key() {
-    env::set_var("OPENAI_API_KEY", "test-openai-key");
-    let config = Config::from_env().unwrap();
-    assert_eq!(config.openai_key, Some("test-openai-key".to_string()));
-    env::remove_var("OPENAI_API_KEY");
+    temp_env::with_vars([("OPENAI_API_KEY", Some("test-openai-key"))], || {
+        let config = Config::from_env().unwrap();
+        assert_eq!(config.openai_key, Some("test-openai-key".to_string()));
+    });
 }
 
 #[test]
 fn test_has_llm_key_with_anthropic() {
-    env::set_var("ANTHROPIC_API_KEY", "test-key");
-    env::remove_var("OPENAI_API_KEY");
-    let config = Config::from_env().unwrap();
-    assert!(config.has_llm_key());
-    env::remove_var("ANTHROPIC_API_KEY");
+    temp_env::with_vars(
+        [
+            ("ANTHROPIC_API_KEY", Some("test-key")),
+            ("OPENAI_API_KEY", None),
+        ],
+        || {
+            let config = Config::from_env().unwrap();
+            assert!(config.has_llm_key());
+        },
+    );
 }
 
 #[test]
 fn test_has_llm_key_with_openai() {
-    env::remove_var("ANTHROPIC_API_KEY");
-    env::set_var("OPENAI_API_KEY", "test-key");
-    let config = Config::from_env().unwrap();
-    assert!(config.has_llm_key());
-    env::remove_var("OPENAI_API_KEY");
+    temp_env::with_vars(
+        [
+            ("ANTHROPIC_API_KEY", None),
+            ("OPENAI_API_KEY", Some("test-key")),
+        ],
+        || {
+            let config = Config::from_env().unwrap();
+            assert!(config.has_llm_key());
+        },
+    );
 }
 
 #[test]
 fn test_has_llm_key_returns_false_when_no_keys() {
-    env::remove_var("ANTHROPIC_API_KEY");
-    env::remove_var("OPENAI_API_KEY");
-    let config = Config::from_env().unwrap();
-    assert!(!config.has_llm_key());
+    temp_env::with_vars(
+        [
+            ("ANTHROPIC_API_KEY", None::<&str>),
+            ("OPENAI_API_KEY", None::<&str>),
+        ],
+        || {
+            let config = Config::from_env().unwrap();
+            assert!(!config.has_llm_key());
+        },
+    );
 }
 
 #[test]
 fn test_custom_links_dir() {
-    env::set_var("MUSUBI_LINKS_DIR", "/custom/path/to/links");
-    let config = Config::from_env().unwrap();
-    assert_eq!(config.links_dir.to_str().unwrap(), "/custom/path/to/links");
-    env::remove_var("MUSUBI_LINKS_DIR");
+    temp_env::with_vars(
+        [("MUSUBI_LINKS_DIR", Some("/custom/path/to/links"))],
+        || {
+            let config = Config::from_env().unwrap();
+            assert_eq!(config.links_dir.to_str().unwrap(), "/custom/path/to/links");
+        },
+    );
 }
 
 #[test]
 fn test_config_defaults_to_home_links() {
-    env::remove_var("MUSUBI_LINKS_DIR");
-    let config = Config::from_env().unwrap();
-    let home = env::var("HOME").unwrap();
-    let expected = std::path::PathBuf::from(home).join("links");
-    assert_eq!(config.links_dir, expected);
+    temp_env::with_vars([("MUSUBI_LINKS_DIR", None::<&str>)], || {
+        let config = Config::from_env().unwrap();
+        let home = env::var("HOME").unwrap();
+        let expected = std::path::PathBuf::from(home).join("links");
+        assert_eq!(config.links_dir, expected);
+    });
 }
 
 #[test]
 fn test_custom_now_dir() {
-    env::set_var("MUSUBI_NOW_DIR", "/custom/path/to/now");
-    let config = Config::from_env().unwrap();
-    assert_eq!(config.now_dir.to_str().unwrap(), "/custom/path/to/now");
-    env::remove_var("MUSUBI_NOW_DIR");
+    temp_env::with_vars([("MUSUBI_NOW_DIR", Some("/custom/path/to/now"))], || {
+        let config = Config::from_env().unwrap();
+        assert_eq!(config.now_dir.to_str().unwrap(), "/custom/path/to/now");
+    });
 }
 
 #[test]
 fn test_config_defaults_to_home_now() {
-    env::remove_var("MUSUBI_NOW_DIR");
-    let config = Config::from_env().unwrap();
-    let home = env::var("HOME").unwrap();
-    let expected = std::path::PathBuf::from(home).join("now");
-    assert_eq!(config.now_dir, expected);
+    temp_env::with_vars([("MUSUBI_NOW_DIR", None::<&str>)], || {
+        let config = Config::from_env().unwrap();
+        let home = env::var("HOME").unwrap();
+        let expected = std::path::PathBuf::from(home).join("now");
+        assert_eq!(config.now_dir, expected);
+    });
 }
 
 #[test]
 fn test_config_does_not_require_home_when_both_dirs_set() {
-    // Save the original HOME value
-    let original_home = env::var("HOME").ok();
-    
-    // Set both custom directories
-    env::set_var("MUSUBI_LINKS_DIR", "/custom/links");
-    env::set_var("MUSUBI_NOW_DIR", "/custom/now");
-    
-    // Remove HOME to verify it's not required
-    env::remove_var("HOME");
-    
-    // This should succeed without HOME being set
-    let config = Config::from_env().unwrap();
-    assert_eq!(config.links_dir.to_str().unwrap(), "/custom/links");
-    assert_eq!(config.now_dir.to_str().unwrap(), "/custom/now");
-    
-    // Cleanup
-    env::remove_var("MUSUBI_LINKS_DIR");
-    env::remove_var("MUSUBI_NOW_DIR");
-    
-    // Restore original HOME if it existed
-    if let Some(home) = original_home {
-        env::set_var("HOME", home);
-    }
+    temp_env::with_vars(
+        [
+            ("MUSUBI_LINKS_DIR", Some("/custom/links")),
+            ("MUSUBI_NOW_DIR", Some("/custom/now")),
+            ("HOME", None),
+        ],
+        || {
+            let config = Config::from_env().unwrap();
+            assert_eq!(config.links_dir.to_str().unwrap(), "/custom/links");
+            assert_eq!(config.now_dir.to_str().unwrap(), "/custom/now");
+        },
+    );
 }

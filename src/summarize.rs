@@ -4,14 +4,19 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Summary {
-    /// A 2-3 sentence summary of the main content
+    /// Summary of the main content (format depends on prompt)
     pub summary: String,
     /// An array of 3-5 relevant topic tags (single words, lowercase)
     pub tags: Vec<String>,
 }
 
 pub trait LlmProvider {
-    fn generate_summary(&self, title: &str, content: &str) -> Result<Summary>;
+    fn generate_summary(
+        &self,
+        title: &str,
+        content: &str,
+        custom_prompt: Option<&str>,
+    ) -> Result<Summary>;
 }
 
 pub struct AnthropicProvider {
@@ -74,12 +79,18 @@ enum ContentBlock {
 }
 
 impl LlmProvider for AnthropicProvider {
-    fn generate_summary(&self, title: &str, content: &str) -> Result<Summary> {
+    fn generate_summary(
+        &self,
+        title: &str,
+        content: &str,
+        custom_prompt: Option<&str>,
+    ) -> Result<Summary> {
         let truncated_content = truncate_content(content, 4000);
 
+        let instruction = custom_prompt.unwrap_or("Provide a 2-3 sentence summary");
         let prompt = format!(
-            "Given this webpage, generate a summary and relevant tags:\n\nTitle: {}\n\nContent: {}",
-            title, truncated_content
+            "Given this webpage, generate a summary and relevant tags.\n\nInstructions for summary: {}\n\nTitle: {}\n\nContent: {}",
+            instruction, title, truncated_content
         );
 
         // Generate JSON schema from the Summary struct
@@ -207,12 +218,18 @@ struct OpenAIFunctionCallResponse {
 }
 
 impl LlmProvider for OpenAIProvider {
-    fn generate_summary(&self, title: &str, content: &str) -> Result<Summary> {
+    fn generate_summary(
+        &self,
+        title: &str,
+        content: &str,
+        custom_prompt: Option<&str>,
+    ) -> Result<Summary> {
         let truncated_content = truncate_content(content, 4000);
 
+        let instruction = custom_prompt.unwrap_or("Provide a 2-3 sentence summary");
         let prompt = format!(
-            "Given this webpage, generate a summary and relevant tags:\n\nTitle: {}\n\nContent: {}",
-            title, truncated_content
+            "Given this webpage, generate a summary and relevant tags.\n\nInstructions for summary: {}\n\nTitle: {}\n\nContent: {}",
+            instruction, title, truncated_content
         );
 
         let schema = schemars::schema_for!(Summary);
@@ -249,9 +266,8 @@ impl LlmProvider for OpenAIProvider {
             return Err(anyhow!("OpenAI API error ({}): {}", status, error_text));
         }
 
-        let openai_response: OpenAIResponse = response
-            .json()
-            .context("Failed to parse OpenAI response")?;
+        let openai_response: OpenAIResponse =
+            response.json().context("Failed to parse OpenAI response")?;
 
         if let Some(choice) = openai_response.choices.first() {
             if let Some(function_call) = &choice.message.function_call {

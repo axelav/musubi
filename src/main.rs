@@ -23,6 +23,10 @@ struct Cli {
     /// Save archived HTML version alongside markdown summary
     #[arg(short = 'a', long = "archive")]
     archive: bool,
+
+    /// Custom prompt for summary generation (default: "Provide a 2-3 sentence summary")
+    #[arg(short, long)]
+    prompt: Option<String>,
 }
 
 fn main() -> Result<()> {
@@ -53,7 +57,7 @@ fn main() -> Result<()> {
                 // Extract text content from HTML for summarization
                 let text_content = extract_text_content(&page.html);
 
-                match provider.generate_summary(&metadata.title, &text_content) {
+                match provider.generate_summary(&metadata.title, &text_content, cli.prompt.as_deref()) {
                     Ok(summary) => {
                         println!("✓ Generated summary");
                         (Some(summary.summary), summary.tags)

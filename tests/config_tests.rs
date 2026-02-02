@@ -59,3 +59,20 @@ fn test_config_defaults_to_home_links() {
     let expected = std::path::PathBuf::from(home).join("links");
     assert_eq!(config.links_dir, expected);
 }
+
+#[test]
+fn test_custom_now_dir() {
+    env::set_var("MUSUBI_NOW_DIR", "/custom/path/to/now");
+    let config = Config::from_env().unwrap();
+    assert_eq!(config.now_dir.to_str().unwrap(), "/custom/path/to/now");
+    env::remove_var("MUSUBI_NOW_DIR");
+}
+
+#[test]
+fn test_config_defaults_to_home_now() {
+    env::remove_var("MUSUBI_NOW_DIR");
+    let config = Config::from_env().unwrap();
+    let home = env::var("HOME").unwrap();
+    let expected = std::path::PathBuf::from(home).join("now");
+    assert_eq!(config.now_dir, expected);
+}

@@ -1,6 +1,6 @@
 [package]
 name = "musubi"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 authors = ["Axel Anderson <axel@ftml.net>"]
 description = "Save and summarize web links to markdown files"

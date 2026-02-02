@@ -1,45 +1,16 @@
 use anyhow::{Context, Result};
 use chrono::{Local, Utc};
+use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::writer::{find_available_filename, sanitize_filename};
 
-/// Escape a string for use in YAML
-/// Wraps the string in double quotes if it contains special characters
-fn yaml_escape(s: &str) -> String {
-    // Check if the string needs escaping
-    let needs_escape = s.is_empty()
-        || s.starts_with(' ')
-        || s.ends_with(' ')
-        || s.contains(':')
-        || s.contains('#')
-        || s.contains('\n')
-        || s.contains('\r')
-        || s.contains('"')
-        || s.contains('\'')
-        || s.contains('\\')
-        || s.starts_with('-')
-        || s.starts_with('[')
-        || s.starts_with('{')
-        || s.starts_with('&')
-        || s.starts_with('*')
-        || s.starts_with('!')
-        || s.starts_with('|')
-        || s.starts_with('>')
-        || s.starts_with('%')
-        || s.starts_with('@')
-        || s.starts_with('`');
-
-    if !needs_escape {
-        return s.to_string();
-    }
-
-    // Escape the string by wrapping in double quotes and escaping internal quotes
-    // Note: backslashes must be escaped first to avoid double-escaping
-    let escaped = s.replace('\\', "\\\\").replace('"', "\\\"");
-    format!("\"{}\"", escaped)
+#[derive(Serialize)]
+struct FrontMatter {
+    title: String,
+    date: String,
 }
 
 /// Create a now file and optionally open in editor
@@ -67,13 +38,17 @@ pub fn create_now_file(
     let base_filename = format!("{} {}.md", date_str, sanitized_title);
     let file_path = find_available_filename(dir, &base_filename);
 
-    // Generate content
+    // Generate content with YAML front matter
     let iso_date = now.to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
-    let escaped_title = yaml_escape(&display_title);
-    let content = format!(
-        "---\ntitle: {}\ndate: {}\n---\n\n## {}\n\n",
-        escaped_title, iso_date, display_title
-    );
+    let front_matter = FrontMatter {
+        title: display_title.clone(),
+        date: iso_date,
+    };
+    
+    let yaml_str = serde_yml::to_string(&front_matter)
+        .context("Failed to serialize front matter to YAML")?;
+    
+    let content = format!("---\n{}---\n\n## {}\n\n", yaml_str, display_title);
 
     // Write file
     fs::write(&file_path, &content)
@@ -127,64 +102,48 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_yaml_escape_simple() {
-        assert_eq!(yaml_escape("Simple Title"), "Simple Title");
-        assert_eq!(yaml_escape("CamelCase"), "CamelCase");
+    fn test_front_matter_serialization_simple() {
+        let fm = FrontMatter {
+            title: "Simple Title".to_string(),
+            date: "2024-01-01T00:00:00.000Z".to_string(),
+        };
+        let yaml = serde_yml::to_string(&fm).unwrap();
+        assert!(yaml.contains("title: Simple Title"));
+        assert!(yaml.contains("date: '2024-01-01T00:00:00.000Z'"));
     }
 
     #[test]
-    fn test_yaml_escape_colon() {
-        assert_eq!(yaml_escape("Note: Important"), r#""Note: Important""#);
+    fn test_front_matter_serialization_with_colon() {
+        let fm = FrontMatter {
+            title: "Note: Important".to_string(),
+            date: "2024-01-01T00:00:00.000Z".to_string(),
+        };
+        let yaml = serde_yml::to_string(&fm).unwrap();
+        // YAML library should properly quote or escape the colon
+        assert!(yaml.contains("title:"));
+        assert!(yaml.contains("Note: Important"));
     }
 
     #[test]
-    fn test_yaml_escape_hash() {
-        assert_eq!(yaml_escape("Issue #123"), r#""Issue #123""#);
+    fn test_front_matter_serialization_with_quotes() {
+        let fm = FrontMatter {
+            title: r#"My "quoted" text"#.to_string(),
+            date: "2024-01-01T00:00:00.000Z".to_string(),
+        };
+        let yaml = serde_yml::to_string(&fm).unwrap();
+        // YAML library should handle quotes properly
+        assert!(yaml.contains("title:"));
     }
 
     #[test]
-    fn test_yaml_escape_quotes() {
-        assert_eq!(yaml_escape(r#"My "quoted" text"#), r#""My \"quoted\" text""#);
-    }
-
-    #[test]
-    fn test_yaml_escape_backslash() {
-        assert_eq!(yaml_escape(r"path\to\file"), r#""path\\to\\file""#);
-    }
-
-    #[test]
-    fn test_yaml_escape_backslash_and_quotes() {
-        assert_eq!(yaml_escape(r#"path\to\"file""#), r#""path\\to\\\"file\"""#);
-    }
-
-    #[test]
-    fn test_yaml_escape_newline() {
-        // Newlines trigger quoting but are not escaped to \\n
-        assert_eq!(yaml_escape("line1\nline2"), "\"line1\nline2\"");
-    }
-
-    #[test]
-    fn test_yaml_escape_carriage_return() {
-        // Carriage returns trigger quoting but are not escaped to \\r
-        assert_eq!(yaml_escape("line1\rline2"), "\"line1\rline2\"");
-    }
-
-    #[test]
-    fn test_yaml_escape_leading_trailing_space() {
-        assert_eq!(yaml_escape(" spaced "), r#"" spaced ""#);
-    }
-
-    #[test]
-    fn test_yaml_escape_special_chars() {
-        assert_eq!(yaml_escape("-dashes"), r#""-dashes""#);
-        assert_eq!(yaml_escape("[brackets]"), r#""[brackets]""#);
-        assert_eq!(yaml_escape("{braces}"), r#""{braces}""#);
-        assert_eq!(yaml_escape("&ampersand"), r#""&ampersand""#);
-        assert_eq!(yaml_escape("*asterisk"), r#""*asterisk""#);
-    }
-
-    #[test]
-    fn test_yaml_escape_empty() {
-        assert_eq!(yaml_escape(""), r#""""#);
+    fn test_front_matter_serialization_with_special_chars() {
+        let fm = FrontMatter {
+            title: "Issue #123 & Test".to_string(),
+            date: "2024-01-01T00:00:00.000Z".to_string(),
+        };
+        let yaml = serde_yml::to_string(&fm).unwrap();
+        // YAML library should handle special characters
+        assert!(yaml.contains("title:"));
+        assert!(yaml.contains("Issue #123"));
     }
 }

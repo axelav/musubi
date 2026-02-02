@@ -1,4 +1,4 @@
-use assert_cmd::Command;
+use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
 use std::fs;
 use tempfile::TempDir;
@@ -6,20 +6,20 @@ use tempfile::TempDir;
 #[test]
 fn test_cli_link_subcommand_basic() {
     let temp_dir = TempDir::new().unwrap();
-    
-    let mut cmd = Command::cargo_bin("musubi").unwrap();
+
+    let mut cmd = cargo_bin_cmd!("musubi");
     cmd.arg("link")
         .arg("https://example.com")
         .arg("--dir")
         .arg(temp_dir.path())
         .env("MUSUBI_LINKS_DIR", temp_dir.path())
         .env("MUSUBI_NOW_DIR", temp_dir.path());
-    
+
     // This test validates CLI argument parsing structure
     // We don't assert on success/failure since it depends on network availability
     // but we verify that any failure is not due to argument parsing
     let output = cmd.output().unwrap();
-    
+
     let stderr = String::from_utf8_lossy(&output.stderr);
     // Should not be a clap error about missing subcommand or invalid args
     assert!(!stderr.contains("error: unrecognized subcommand"));
@@ -29,25 +29,25 @@ fn test_cli_link_subcommand_basic() {
 #[test]
 fn test_cli_now_subcommand_no_edit() {
     let temp_dir = TempDir::new().unwrap();
-    
-    let mut cmd = Command::cargo_bin("musubi").unwrap();
+
+    let mut cmd = cargo_bin_cmd!("musubi");
     cmd.arg("now")
         .arg("--no-edit")
         .arg("--dir")
         .arg(temp_dir.path())
         .env("MUSUBI_LINKS_DIR", temp_dir.path())
         .env("MUSUBI_NOW_DIR", temp_dir.path());
-    
+
     cmd.assert()
         .success()
         .stderr(predicate::str::contains("✓ Created:"));
-    
+
     // Verify a file was created
     let entries: Vec<_> = fs::read_dir(temp_dir.path())
         .unwrap()
         .filter_map(|e| e.ok())
         .collect();
-    
+
     assert_eq!(entries.len(), 1, "Should create exactly one file");
     assert_eq!(
         entries[0].path().extension().and_then(|e| e.to_str()),
@@ -58,8 +58,8 @@ fn test_cli_now_subcommand_no_edit() {
 #[test]
 fn test_cli_now_subcommand_with_title_no_edit() {
     let temp_dir = TempDir::new().unwrap();
-    
-    let mut cmd = Command::cargo_bin("musubi").unwrap();
+
+    let mut cmd = cargo_bin_cmd!("musubi");
     cmd.arg("now")
         .arg("test note title")
         .arg("--no-edit")
@@ -67,17 +67,17 @@ fn test_cli_now_subcommand_with_title_no_edit() {
         .arg(temp_dir.path())
         .env("MUSUBI_LINKS_DIR", temp_dir.path())
         .env("MUSUBI_NOW_DIR", temp_dir.path());
-    
+
     cmd.assert()
         .success()
         .stderr(predicate::str::contains("✓ Created:"));
-    
+
     // Verify the file contains the title
     let entries: Vec<_> = fs::read_dir(temp_dir.path())
         .unwrap()
         .filter_map(|e| e.ok())
         .collect();
-    
+
     assert_eq!(entries.len(), 1);
     let content = fs::read_to_string(entries[0].path()).unwrap();
     assert!(content.contains("title: test note title"));
@@ -85,8 +85,8 @@ fn test_cli_now_subcommand_with_title_no_edit() {
 
 #[test]
 fn test_cli_requires_subcommand() {
-    let mut cmd = Command::cargo_bin("musubi").unwrap();
-    
+    let mut cmd = cargo_bin_cmd!("musubi");
+
     // Running without any subcommand should fail
     cmd.assert()
         .failure()
@@ -96,14 +96,14 @@ fn test_cli_requires_subcommand() {
 #[test]
 fn test_cli_link_requires_url() {
     let temp_dir = TempDir::new().unwrap();
-    
-    let mut cmd = Command::cargo_bin("musubi").unwrap();
+
+    let mut cmd = cargo_bin_cmd!("musubi");
     cmd.arg("link")
         .arg("--dir")
         .arg(temp_dir.path())
         .env("MUSUBI_LINKS_DIR", temp_dir.path())
         .env("MUSUBI_NOW_DIR", temp_dir.path());
-    
+
     // Should fail because URL is required
     cmd.assert()
         .failure()
@@ -112,9 +112,9 @@ fn test_cli_link_requires_url() {
 
 #[test]
 fn test_cli_invalid_subcommand() {
-    let mut cmd = Command::cargo_bin("musubi").unwrap();
+    let mut cmd = cargo_bin_cmd!("musubi");
     cmd.arg("invalid-command");
-    
+
     cmd.assert()
         .failure()
         .stderr(predicate::str::contains("unrecognized subcommand"));
@@ -124,33 +124,32 @@ fn test_cli_invalid_subcommand() {
 fn test_cli_now_dir_override() {
     let temp_dir = TempDir::new().unwrap();
     let custom_dir = temp_dir.path().join("custom");
-    
-    let mut cmd = Command::cargo_bin("musubi").unwrap();
+
+    let mut cmd = cargo_bin_cmd!("musubi");
     cmd.arg("now")
         .arg("--no-edit")
         .arg("--dir")
         .arg(&custom_dir)
         .env("MUSUBI_LINKS_DIR", temp_dir.path())
         .env("MUSUBI_NOW_DIR", temp_dir.path());
-    
-    cmd.assert()
-        .success();
-    
+
+    cmd.assert().success();
+
     // Verify file was created in custom directory
     assert!(custom_dir.exists());
     let entries: Vec<_> = fs::read_dir(&custom_dir)
         .unwrap()
         .filter_map(|e| e.ok())
         .collect();
-    
+
     assert_eq!(entries.len(), 1);
 }
 
 #[test]
 fn test_cli_help_shows_subcommands() {
-    let mut cmd = Command::cargo_bin("musubi").unwrap();
+    let mut cmd = cargo_bin_cmd!("musubi");
     cmd.arg("--help");
-    
+
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("link"))

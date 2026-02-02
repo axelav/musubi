@@ -99,6 +99,7 @@ fn test_yaml_escaping_hash_in_title() {
     
     // Title with hash should be quoted
     assert!(yaml_title.starts_with('"'));
+    assert!(yaml_title.ends_with('"'));
     assert!(yaml_title.contains("Issue #123 Fix"));
 }
 
@@ -126,4 +127,17 @@ fn test_yaml_no_escaping_simple_title() {
     
     // Simple title should not be quoted
     assert_eq!(yaml_title, "Simple Title");
+}
+
+#[test]
+fn test_yaml_escaping_backslash_and_quotes() {
+    let temp_dir = TempDir::new().unwrap();
+    let title = r#"path\to\"file""#;
+    let (path, _) = create_now_file(temp_dir.path(), Some(title), false).unwrap();
+
+    let content = fs::read_to_string(&path).unwrap();
+    let yaml_title = extract_yaml_title(&content).unwrap();
+    
+    // Both backslashes and quotes should be properly escaped
+    assert_eq!(yaml_title, r#""path\\to\\\"file\"""#);
 }

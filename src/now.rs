@@ -37,6 +37,7 @@ fn yaml_escape(s: &str) -> String {
     }
 
     // Escape the string by wrapping in double quotes and escaping internal quotes
+    // Note: backslashes must be escaped first to avoid double-escaping
     let escaped = s.replace('\\', "\\\\").replace('"', "\\\"");
     format!("\"{}\"", escaped)
 }

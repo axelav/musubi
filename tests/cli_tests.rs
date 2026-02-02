@@ -15,17 +15,15 @@ fn test_cli_link_subcommand_basic() {
         .env("MUSUBI_LINKS_DIR", temp_dir.path())
         .env("MUSUBI_NOW_DIR", temp_dir.path());
     
-    // Note: This will fail in CI without network, but validates the CLI structure
-    // The command should at least parse arguments correctly
+    // This test validates CLI argument parsing structure
+    // We don't assert on success/failure since it depends on network availability
+    // but we verify that any failure is not due to argument parsing
     let output = cmd.output().unwrap();
     
-    // Either succeeds or fails with network error, not argument parsing error
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        // Should not be a clap error about missing subcommand or invalid args
-        assert!(!stderr.contains("error: unrecognized subcommand"));
-        assert!(!stderr.contains("error: unexpected argument"));
-    }
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    // Should not be a clap error about missing subcommand or invalid args
+    assert!(!stderr.contains("error: unrecognized subcommand"));
+    assert!(!stderr.contains("error: unexpected argument"));
 }
 
 #[test]
@@ -51,7 +49,10 @@ fn test_cli_now_subcommand_no_edit() {
         .collect();
     
     assert_eq!(entries.len(), 1, "Should create exactly one file");
-    assert!(entries[0].path().extension().unwrap() == "md");
+    assert_eq!(
+        entries[0].path().extension().and_then(|e| e.to_str()),
+        Some("md")
+    );
 }
 
 #[test]

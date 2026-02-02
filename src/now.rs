@@ -121,3 +121,70 @@ pub fn create_now_file(
 
     Ok((file_path, editor_launched))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_yaml_escape_simple() {
+        assert_eq!(yaml_escape("Simple Title"), "Simple Title");
+        assert_eq!(yaml_escape("CamelCase"), "CamelCase");
+    }
+
+    #[test]
+    fn test_yaml_escape_colon() {
+        assert_eq!(yaml_escape("Note: Important"), r#""Note: Important""#);
+    }
+
+    #[test]
+    fn test_yaml_escape_hash() {
+        assert_eq!(yaml_escape("Issue #123"), r#""Issue #123""#);
+    }
+
+    #[test]
+    fn test_yaml_escape_quotes() {
+        assert_eq!(yaml_escape(r#"My "quoted" text"#), r#""My \"quoted\" text""#);
+    }
+
+    #[test]
+    fn test_yaml_escape_backslash() {
+        assert_eq!(yaml_escape(r"path\to\file"), r#""path\\to\\file""#);
+    }
+
+    #[test]
+    fn test_yaml_escape_backslash_and_quotes() {
+        assert_eq!(yaml_escape(r#"path\to\"file""#), r#""path\\to\\\"file\"""#);
+    }
+
+    #[test]
+    fn test_yaml_escape_newline() {
+        // Newlines trigger quoting but are not escaped to \\n
+        assert_eq!(yaml_escape("line1\nline2"), "\"line1\nline2\"");
+    }
+
+    #[test]
+    fn test_yaml_escape_carriage_return() {
+        // Carriage returns trigger quoting but are not escaped to \\r
+        assert_eq!(yaml_escape("line1\rline2"), "\"line1\rline2\"");
+    }
+
+    #[test]
+    fn test_yaml_escape_leading_trailing_space() {
+        assert_eq!(yaml_escape(" spaced "), r#"" spaced ""#);
+    }
+
+    #[test]
+    fn test_yaml_escape_special_chars() {
+        assert_eq!(yaml_escape("-dashes"), r#""-dashes""#);
+        assert_eq!(yaml_escape("[brackets]"), r#""[brackets]""#);
+        assert_eq!(yaml_escape("{braces}"), r#""{braces}""#);
+        assert_eq!(yaml_escape("&ampersand"), r#""&ampersand""#);
+        assert_eq!(yaml_escape("*asterisk"), r#""*asterisk""#);
+    }
+
+    #[test]
+    fn test_yaml_escape_empty() {
+        assert_eq!(yaml_escape(""), r#""""#);
+    }
+}

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 pub struct Summary {
     /// Summary of the main content (format depends on prompt)
     pub summary: String,
-    /// An array of 3-5 relevant topic tags (lowercase, hyphenated if multi-word)
+    /// An array of 3-5 broad topic tags (lowercase, hyphenated if multi-word). Prefer general categories over narrow/specific terms.
     pub tags: Vec<String>,
 }
 
@@ -89,7 +89,7 @@ impl LlmProvider for AnthropicProvider {
 
         let instruction = custom_prompt.unwrap_or("Provide a 2-3 sentence summary");
         let prompt = format!(
-            "Given this webpage, generate a summary and relevant tags.\n\nInstructions for summary: {}\n\nTag format: lowercase, use hyphens for multi-word tags (e.g., 'open-source' not 'opensource').\n\nTitle: {}\n\nContent: {}",
+            "Given this webpage, generate a summary and relevant tags.\n\nInstructions for summary: {}\n\nTag guidelines: Generate 3-5 broad, general-purpose tags. Prefer wide categories (e.g., 'fiction', 'design', 'programming') over narrow or niche terms (e.g., avoid 'interactive-fiction', 'ios-app', 'mobile-reading'). Tags should be lowercase, using hyphens for multi-word tags (e.g., 'open-source' not 'opensource').\n\nTitle: {}\n\nContent: {}",
             instruction, title, truncated_content
         );
 
@@ -228,7 +228,7 @@ impl LlmProvider for OpenAIProvider {
 
         let instruction = custom_prompt.unwrap_or("Provide a 2-3 sentence summary");
         let prompt = format!(
-            "Given this webpage, generate a summary and relevant tags.\n\nInstructions for summary: {}\n\nTag format: lowercase, use hyphens for multi-word tags (e.g., 'open-source' not 'opensource').\n\nTitle: {}\n\nContent: {}",
+            "Given this webpage, generate a summary and relevant tags.\n\nInstructions for summary: {}\n\nTag guidelines: Generate 3-5 broad, general-purpose tags. Prefer wide categories (e.g., 'fiction', 'design', 'programming') over narrow or niche terms (e.g., avoid 'interactive-fiction', 'ios-app', 'mobile-reading'). Tags should be lowercase, using hyphens for multi-word tags (e.g., 'open-source' not 'opensource').\n\nTitle: {}\n\nContent: {}",
             instruction, title, truncated_content
         );
 

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Summary {
-    /// Summary of the main content (format depends on prompt)
+    /// A direct, confident summary of what this content is about. State facts plainly without hedging.
     pub summary: String,
     /// An array of 3-5 broad topic tags (lowercase, hyphenated if multi-word). Prefer general categories over narrow/specific terms.
     pub tags: Vec<String>,
@@ -89,7 +89,7 @@ impl LlmProvider for AnthropicProvider {
 
         let instruction = custom_prompt.unwrap_or("Provide a 2-3 sentence summary");
         let prompt = format!(
-            "Given this webpage, generate a summary and relevant tags.\n\nInstructions for summary: {}\n\nTag guidelines: Generate 3-5 broad, general-purpose tags. Prefer wide categories (e.g., 'fiction', 'design', 'programming') over narrow or niche terms (e.g., avoid 'interactive-fiction', 'ios-app', 'mobile-reading'). Tags should be lowercase, using hyphens for multi-word tags (e.g., 'open-source' not 'opensource').\n\nTitle: {}\n\nContent: {}",
+            "Given this webpage, generate a summary and relevant tags.\n\nInstructions for summary: {}\n\nStyle: Write with confidence and directness. State what the content IS, not what it \"appears to be\" or \"seems to discuss\". Never start with \"This webpage\", \"This article\", \"This page\", \"This piece\", \"This appears\", \"A publication titled\", or any meta-reference to the format. Never use hedging language like \"appears to\", \"seems to\", \"likely\", or \"possibly\". Just describe the subject matter itself as if you were telling someone about it in conversation.\n\nTag guidelines: Generate 3-5 broad, general-purpose tags. Prefer wide categories (e.g., 'fiction', 'design', 'programming') over narrow or niche terms (e.g., avoid 'interactive-fiction', 'ios-app', 'mobile-reading'). Tags should be lowercase, using hyphens for multi-word tags (e.g., 'open-source' not 'opensource').\n\nTitle: {}\n\nContent: {}",
             instruction, title, truncated_content
         );
 
@@ -228,7 +228,7 @@ impl LlmProvider for OpenAIProvider {
 
         let instruction = custom_prompt.unwrap_or("Provide a 2-3 sentence summary");
         let prompt = format!(
-            "Given this webpage, generate a summary and relevant tags.\n\nInstructions for summary: {}\n\nTag guidelines: Generate 3-5 broad, general-purpose tags. Prefer wide categories (e.g., 'fiction', 'design', 'programming') over narrow or niche terms (e.g., avoid 'interactive-fiction', 'ios-app', 'mobile-reading'). Tags should be lowercase, using hyphens for multi-word tags (e.g., 'open-source' not 'opensource').\n\nTitle: {}\n\nContent: {}",
+            "Given this webpage, generate a summary and relevant tags.\n\nInstructions for summary: {}\n\nStyle: Write with confidence and directness. State what the content IS, not what it \"appears to be\" or \"seems to discuss\". Never start with \"This webpage\", \"This article\", \"This page\", \"This piece\", \"This appears\", \"A publication titled\", or any meta-reference to the format. Never use hedging language like \"appears to\", \"seems to\", \"likely\", or \"possibly\". Just describe the subject matter itself as if you were telling someone about it in conversation.\n\nTag guidelines: Generate 3-5 broad, general-purpose tags. Prefer wide categories (e.g., 'fiction', 'design', 'programming') over narrow or niche terms (e.g., avoid 'interactive-fiction', 'ios-app', 'mobile-reading'). Tags should be lowercase, using hyphens for multi-word tags (e.g., 'open-source' not 'opensource').\n\nTitle: {}\n\nContent: {}",
             instruction, title, truncated_content
         );
 

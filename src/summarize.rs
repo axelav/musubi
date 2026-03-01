@@ -87,7 +87,7 @@ impl LlmProvider for AnthropicProvider {
     ) -> Result<Summary> {
         let truncated_content = truncate_content(content, 4000);
 
-        let instruction = custom_prompt.unwrap_or("Provide a 2-3 sentence summary");
+        let instruction = custom_prompt.unwrap_or("Summarize this content proportionally to its complexity. Simple or short content gets 1-2 sentences. Dense or technical content gets a longer summary that captures the key concepts, techniques, and terminology. Always include specific terms, names, and concepts someone would search for later. Focus on what makes this particular piece notable — not just what topic it covers, but what it contributes or argues.");
         let prompt = format!(
             "Given this webpage, generate a summary and relevant tags.\n\nInstructions for summary: {}\n\nStyle: Write with confidence and directness. State what the content IS, not what it \"appears to be\" or \"seems to discuss\". Never start with \"This webpage\", \"This article\", \"This page\", \"This piece\", \"This appears\", \"A publication titled\", or any meta-reference to the format. Never use hedging language like \"appears to\", \"seems to\", \"likely\", or \"possibly\". Just describe the subject matter itself as if you were telling someone about it in conversation.\n\nTag guidelines: Generate 3-5 broad, general-purpose tags. Prefer wide categories (e.g., 'fiction', 'design', 'programming') over narrow or niche terms (e.g., avoid 'interactive-fiction', 'ios-app', 'mobile-reading'). Tags should be lowercase, using hyphens for multi-word tags (e.g., 'open-source' not 'opensource').\n\nTitle: {}\n\nContent: {}",
             instruction, title, truncated_content
@@ -226,7 +226,7 @@ impl LlmProvider for OpenAIProvider {
     ) -> Result<Summary> {
         let truncated_content = truncate_content(content, 4000);
 
-        let instruction = custom_prompt.unwrap_or("Provide a 2-3 sentence summary");
+        let instruction = custom_prompt.unwrap_or("Summarize this content proportionally to its complexity. Simple or short content gets 1-2 sentences. Dense or technical content gets a longer summary that captures the key concepts, techniques, and terminology. Always include specific terms, names, and concepts someone would search for later. Focus on what makes this particular piece notable — not just what topic it covers, but what it contributes or argues.");
         let prompt = format!(
             "Given this webpage, generate a summary and relevant tags.\n\nInstructions for summary: {}\n\nStyle: Write with confidence and directness. State what the content IS, not what it \"appears to be\" or \"seems to discuss\". Never start with \"This webpage\", \"This article\", \"This page\", \"This piece\", \"This appears\", \"A publication titled\", or any meta-reference to the format. Never use hedging language like \"appears to\", \"seems to\", \"likely\", or \"possibly\". Just describe the subject matter itself as if you were telling someone about it in conversation.\n\nTag guidelines: Generate 3-5 broad, general-purpose tags. Prefer wide categories (e.g., 'fiction', 'design', 'programming') over narrow or niche terms (e.g., avoid 'interactive-fiction', 'ios-app', 'mobile-reading'). Tags should be lowercase, using hyphens for multi-word tags (e.g., 'open-source' not 'opensource').\n\nTitle: {}\n\nContent: {}",
             instruction, title, truncated_content

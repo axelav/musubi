@@ -41,11 +41,24 @@ now_dir           = "~/my-notes"
 ```
 
 `~` in path values is expanded against `$HOME`. A missing file is treated as
-no configuration; a malformed file is a hard error.
+no configuration; a malformed file (or one with unknown keys) is a hard
+error — typos like `anthropic_key` will refuse to load.
+
+#### Quick setup
+
+Create the file with secure permissions in one shot:
+
+```bash
+mkdir -p ~/.config/musubi
+umask 077
+cat > ~/.config/musubi/config.toml <<EOF
+anthropic_api_key = "sk-ant-..."
+EOF
+chmod 600 ~/.config/musubi/config.toml
+```
 
 If the file contains an API key and is readable by group or others, Musubi
-prints a warning to stderr — `chmod 600 ~/.config/musubi/config.toml` to
-silence it.
+prints a warning to stderr on every invocation. `chmod 600` silences it.
 
 ## Usage
 

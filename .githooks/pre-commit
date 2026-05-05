@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# Format all staged Rust files before commit
+cargo fmt --all
+
+# Re-stage any files that were formatted
+git diff --name-only --cached -- '*.rs' | xargs -I {} git add {}

@@ -53,7 +53,7 @@ enum Commands {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    let config = Config::from_env().context("Failed to load configuration")?;
+    let config = Config::load().context("Failed to load configuration")?;
 
     match cli.command {
         Commands::Link {

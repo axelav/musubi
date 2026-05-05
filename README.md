@@ -10,7 +10,11 @@ cargo install --path .
 
 ## Configuration
 
-Set environment variables:
+Configuration is read from environment variables and (optionally) a TOML
+config file. For each setting, environment variables win over the file, and
+the file wins over built-in defaults.
+
+### Environment variables
 
 ```bash
 # Required: At least one LLM API key
@@ -22,6 +26,26 @@ export OPENAI_API_KEY="your-key-here"
 export MUSUBI_LINKS_DIR="$HOME/my-links"
 export MUSUBI_NOW_DIR="$HOME/my-notes"
 ```
+
+### Config file
+
+Musubi looks for a TOML file at `$XDG_CONFIG_HOME/musubi/config.toml`
+(typically `~/.config/musubi/config.toml`). Override the location with
+`MUSUBI_CONFIG=/path/to/file.toml`. All keys are optional:
+
+```toml
+anthropic_api_key = "sk-ant-..."
+openai_api_key    = "sk-..."
+links_dir         = "~/my-links"
+now_dir           = "~/my-notes"
+```
+
+`~` in path values is expanded against `$HOME`. A missing file is treated as
+no configuration; a malformed file is a hard error.
+
+If the file contains an API key and is readable by group or others, Musubi
+prints a warning to stderr — `chmod 600 ~/.config/musubi/config.toml` to
+silence it.
 
 ## Usage
 

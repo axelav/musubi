@@ -287,6 +287,70 @@ fn test_empty_file_is_fine() {
     });
 }
 
+// --- default config path resolution (regression: must be ~/.config/musubi/config.toml,
+//     not Apple's Application Support, on macOS) ---
+
+#[test]
+fn test_default_config_path_uses_xdg_under_home() {
+    // Point HOME at a tempdir, place the config at $HOME/.config/musubi/config.toml,
+    // unset MUSUBI_CONFIG and XDG_CONFIG_HOME entirely. The file MUST be picked up.
+    let home = TempDir::new().unwrap();
+    let cfg_dir = home.path().join(".config").join("musubi");
+    fs::create_dir_all(&cfg_dir).unwrap();
+    fs::write(
+        cfg_dir.join("config.toml"),
+        r#"anthropic_api_key = "from-default-path""#,
+    )
+    .unwrap();
+
+    temp_env::with_vars(
+        [
+            ("ANTHROPIC_API_KEY", None::<String>),
+            ("OPENAI_API_KEY", None),
+            ("MUSUBI_LINKS_DIR", Some("/tmp/links".to_string())),
+            ("MUSUBI_NOW_DIR", Some("/tmp/now".to_string())),
+            ("MUSUBI_CONFIG", None),
+            ("XDG_CONFIG_HOME", None),
+            ("HOME", Some(home.path().to_string_lossy().into_owned())),
+        ],
+        || {
+            let config = Config::load().unwrap();
+            assert_eq!(
+                config.anthropic_key.as_deref(),
+                Some("from-default-path"),
+                "default path resolution must land on $HOME/.config/musubi/config.toml"
+            );
+        },
+    );
+}
+
+#[test]
+fn test_xdg_config_home_is_respected() {
+    let xdg = TempDir::new().unwrap();
+    let cfg_dir = xdg.path().join("musubi");
+    fs::create_dir_all(&cfg_dir).unwrap();
+    fs::write(
+        cfg_dir.join("config.toml"),
+        r#"anthropic_api_key = "from-xdg""#,
+    )
+    .unwrap();
+
+    temp_env::with_vars(
+        [
+            ("ANTHROPIC_API_KEY", None::<String>),
+            ("OPENAI_API_KEY", None),
+            ("MUSUBI_LINKS_DIR", Some("/tmp/links".to_string())),
+            ("MUSUBI_NOW_DIR", Some("/tmp/now".to_string())),
+            ("MUSUBI_CONFIG", None),
+            ("XDG_CONFIG_HOME", Some(xdg.path().to_string_lossy().into_owned())),
+        ],
+        || {
+            let config = Config::load().unwrap();
+            assert_eq!(config.anthropic_key.as_deref(), Some("from-xdg"));
+        },
+    );
+}
+
 #[test]
 fn test_unknown_keys_in_file_are_rejected() {
     // Catch typos like `anthropic_key` instead of `anthropic_api_key`.

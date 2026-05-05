@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use directories::ProjectDirs;
 use serde::Deserialize;
 use std::env;
 use std::fs;
@@ -93,7 +92,15 @@ fn config_file_path() -> Option<PathBuf> {
             return Some(PathBuf::from(override_path));
         }
     }
-    ProjectDirs::from("", "", "musubi").map(|dirs| dirs.config_dir().join("config.toml"))
+    // Resolve XDG manually so the path is the same on macOS and Linux
+    // (~/.config/musubi/config.toml). The `directories` crate would point
+    // at ~/Library/Application Support/musubi/ on macOS, which is the
+    // platform-native location but doesn't match what most CLI users expect.
+    let base = match env::var("XDG_CONFIG_HOME") {
+        Ok(v) if !v.is_empty() => PathBuf::from(v),
+        _ => PathBuf::from(env::var("HOME").ok()?).join(".config"),
+    };
+    Some(base.join("musubi").join("config.toml"))
 }
 
 fn expand_tilde(input: &str) -> PathBuf {
